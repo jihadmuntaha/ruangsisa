@@ -1,0 +1,99 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:ruang_sisa/app/routes/app_pages.dart';
+
+class LoginView extends StatelessWidget {
+  const LoginView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 80),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'RuangSisa',
+              style: TextStyle(
+                fontSize: 32, 
+                fontWeight: FontWeight.w900, 
+                color: Color(0xFF2D6A4F),
+                letterSpacing: -1,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Masuk untuk melanjutkan kontribusi\nlestarimu hari ini.',
+              style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
+            ),
+            const SizedBox(height: 48),
+            
+            _buildTextField("Email", Icons.email_outlined, "Masukkan email kamu"),
+            const SizedBox(height: 20),
+            _buildTextField("Kata Sandi", Icons.lock_outline, "••••••••", isObscure: true),
+            
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {},
+                child: const Text('Lupa Kata Sandi?', style: TextStyle(color: Color(0xFF2D6A4F))),
+              ),
+            ),
+            
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2D6A4F),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                onPressed: () => Get.offAllNamed(Routes.MAIN_WRAPPER),
+                child: const Text('Masuk Sekarang', 
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text("Belum punya akun? "),
+                GestureDetector(
+                  onTap: () => Get.toNamed('/register'),
+                  child: const Text("Daftar di sini", 
+                    style: TextStyle(color: Color(0xFF2D6A4F), fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, IconData icon, String hint, {bool isObscure = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const SizedBox(height: 8),
+        TextField(
+          obscureText: isObscure,
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: Icon(icon, color: const Color(0xFF2D6A4F)),
+            filled: true,
+            fillColor: const Color(0xFFF3F4F6),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+          ),
+        ),
+      ],
+    );
+  }
+}
