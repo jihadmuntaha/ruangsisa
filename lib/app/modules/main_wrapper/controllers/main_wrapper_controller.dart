@@ -1,23 +1,16 @@
 import 'package:get/get.dart';
 
 class MainWrapperController extends GetxController {
-  //TODO: Implement MainWrapperController
+  // Variabel untuk menyimpan index halaman yang aktif (reaktif .obs)
+  final currentIndex = 0.obs;
 
-  final count = 0.obs;
-  @override
-  void onInit() {
-    super.onInit();
+  // Fungsi pemindah halaman utama
+  void changePage(int index) {
+    currentIndex.value = index;
   }
 
-  @override
-  void onReady() {
-    super.onReady();
+  // Fungsi alias agar tidak error jika di View tertulis changeTabIndex
+  void changeTabIndex(int index) {
+    currentIndex.value = index;
   }
-
-  @override
-  void onClose() {
-    super.onClose();
-  }
-
-  void increment() => count.value++;
 }
