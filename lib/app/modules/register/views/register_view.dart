@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../controllers/register_controller.dart'; // Jalur import controller bawaan GetX CLI kamu
 
-class RegisterView extends StatelessWidget {
+// 1. DIUBAH: Menggunakan GetView<RegisterController> agar otomatis mengenali variabel 'controller'
+class RegisterView extends GetView<RegisterController> {
   const RegisterView({super.key});
 
   @override
@@ -39,7 +41,7 @@ class RegisterView extends StatelessWidget {
                   Text(
                     'Bergabunglah dalam komunitas ekonomi sirkular.\nBeri kehidupan baru untuk barang lama Anda.',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: Colors.white.withOpacity(0.7),
                       fontSize: 13,
                       height: 1.4,
                     ),
@@ -69,17 +71,21 @@ class RegisterView extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
 
-                  // Form Fields
+                  // Form Fields (Sudah terikat ke variabel textController milik RegisterController)
                   _buildFormInput(
-                    'Nama Lengkap',
+                    'Nama Pengguna (Username)',
                     Icons.person_outline_rounded,
-                    'John Doe',
+                    'jihadmuntaha',
+                    textController:
+                        controller.usernameController, // <--- Ikat ke username
                   ),
                   const SizedBox(height: 16),
                   _buildFormInput(
                     'Email',
                     Icons.mail_outline_rounded,
                     'nama@email.com',
+                    textController:
+                        controller.emailController, // <--- Ikat ke email
                   ),
                   const SizedBox(height: 16),
                   _buildFormInput(
@@ -87,50 +93,53 @@ class RegisterView extends StatelessWidget {
                     Icons.lock_outline_rounded,
                     '••••••••',
                     isSecure: true,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildFormInput(
-                    'Konfirmasi Kata Sandi',
-                    Icons.lock_reset_rounded,
-                    '••••••••',
-                    isSecure: true,
+                    textController:
+                        controller.passwordController, // <--- Ikat ke password
                   ),
                   const SizedBox(height: 32),
 
-                  // Submit Button (Daftar)
+                  // Submit Button (Daftar) -> Sudah Full Reactive menggunakan Obx
                   SizedBox(
                     width: double.infinity,
                     height: 52,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2D6A4F),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      // Logika sukses daftar, balik ke login
-                      onPressed: () => Get.back(),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Daftar Sekarang',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Icon(
-                            Icons.arrow_forward,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                        ],
-                      ),
-                    ),
+                    child: Obx(() {
+                      return controller.isLoading.value
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFF2D6A4F),
+                              ),
+                            )
+                          : ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2D6A4F),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              // 2. DIUBAH: Memicu fungsi registerUser() di controller pas diklik
+                              onPressed: () => controller.registerUser(),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Daftar Sekarang',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Icon(
+                                    Icons.arrow_forward,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
+                            );
+                    }),
                   ),
                   const SizedBox(height: 24),
 
@@ -198,15 +207,15 @@ class RegisterView extends StatelessWidget {
                   // Back Link ke Login
                   Center(
                     child: GestureDetector(
-                      onTap: () => Get.back(),
+                      onTap: () => Get.back(), // Kembali ke layar login
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
+                          const Text(
                             'Sudah punya akun? ',
                             style: TextStyle(color: Colors.grey, fontSize: 13),
                           ),
-                          Text(
+                          const Text(
                             'Masuk',
                             style: TextStyle(
                               color: Color(0xFF2D6A4F),
@@ -228,13 +237,17 @@ class RegisterView extends StatelessWidget {
     );
   }
 
-  // Helper Widget buat Input Field biar kodenya ga numpuk
+  // Helper Widget yang sudah di-upgrade: Mata password bisa dibuka-tutup terpisah secara lokal!
   Widget _buildFormInput(
     String label,
     IconData icon,
     String hint, {
     bool isSecure = false,
+    required TextEditingController textController,
   }) {
+    // 1. Buat RxBool lokal khusus untuk memantau status field ini saja
+    final isHidden = isSecure.obs;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -247,29 +260,49 @@ class RegisterView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        TextField(
-          obscureText: isSecure,
-          style: const TextStyle(fontSize: 14),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey[400]),
-            prefixIcon: Icon(icon, color: Colors.grey[600], size: 20),
-            suffixIcon: isSecure
-                ? const Icon(
-                    Icons.visibility_off_outlined,
-                    color: Colors.grey,
-                    size: 20,
-                  )
-                : null,
-            filled: true,
-            fillColor: const Color(0xFFF3F4F6),
-            contentPadding: const EdgeInsets.symmetric(vertical: 16),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
+
+        // 2. Bungkus TextField dengan Obx agar mendeteksi klik mata secara real-time
+        Obx(() {
+          return TextField(
+            controller: textController,
+            // Ikuti nilai true/false dari isHidden lokal
+            obscureText: isHidden.value,
+            style: const TextStyle(fontSize: 14),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(color: Colors.grey[400]),
+              prefixIcon: Icon(icon, color: Colors.grey[600], size: 20),
+
+              // 3. Modifikasi SuffixIcon secara dinamis
+              suffixIcon: isSecure
+                  ? IconButton(
+                      icon: Icon(
+                        isHidden.value
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: Colors.grey,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        // Membalikkan status tersembunyi murni untuk field ini saja
+                        isHidden.value = !isHidden.value;
+                      },
+                    )
+                  : null,
+
+              filled: true,
+              fillColor: const Color(0xFFF3F4F6),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 16,
+                horizontal: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
             ),
-          ),
-        ),
+          );
+        }),
       ],
     );
   }

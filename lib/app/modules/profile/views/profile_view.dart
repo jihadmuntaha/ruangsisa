@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../controllers/profile_controller.dart'; // Sesuaikan jalur import controller kalian
 
+// 1. DIUBAH: Menggunakan StatelessWidget agar mandiri & anti-crash dari Bottom Nav
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // 🚨 MANANTRA PENYELAMAT: Memaksa GetX mendaftarkan ProfileController ke memori saat tab diklik
+    final ProfileController controller = Get.put(ProfileController());
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -41,16 +46,32 @@ class ProfileView extends StatelessWidget {
                   child: Icon(Icons.person, size: 40, color: Colors.white),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Ahmad Setiawan',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+
+                // 🚨 Menggunakan Obx agar Nama User dinamis pasca-login
+                Obx(
+                  () => Text(
+                    controller.name.value,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
+
                 const SizedBox(height: 6),
-                const Text(
-                  'Pecinta tanaman & gerakan zero-waste Jakarta Selatan ♻️',
-                  style: TextStyle(color: Color(0xFF404943), fontSize: 13),
-                  textAlign: TextAlign.center,
+
+                // 🚨 Menggunakan Obx agar Bio User dinamis dari database
+                Obx(
+                  () => Text(
+                    controller.bio.value,
+                    style: const TextStyle(
+                      color: Color(0xFF404943),
+                      fontSize: 13,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
+
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
@@ -73,35 +94,80 @@ class ProfileView extends StatelessWidget {
                   ),
                 ),
                 const Divider(height: 32),
-                const Row(
+
+                // 🚨 Bagian Stat Counter dipantau Obx secara reaktif mengikuti jumlah upload
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _StatItem(num: '24', label: 'Postingan'),
-                    _StatItem(num: '1.2k', label: 'Pengikut'),
-                    _StatItem(num: '482', label: 'Mengikuti'),
+                    Obx(
+                      () => _StatItem(
+                        num: '${controller.userContributions.length}',
+                        label: 'Postingan',
+                      ),
+                    ),
+                    const _StatItem(num: '0', label: 'Pengikut'),
+                    const _StatItem(num: '0', label: 'Mengikuti'),
                   ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
+
           // Tab Grid Konten Saya
           const Text(
             'Kontribusi Aktif',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            children: [
-              _buildMiniGrid('Monstera Sehat', 'Gratis'),
-              _buildMiniGrid('Kursi Kayu Jati', 'Barter'),
-            ],
-          ),
+
+          // 🚨 REACTIVE GRID: Kosong di awal, otomatis memuntahkan data saat terisi kelak
+          Obx(() {
+            if (controller.userContributions.isEmpty) {
+              return Container(
+                height: 150,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.image_not_supported_outlined,
+                      color: Colors.grey,
+                      size: 36,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Belum ada kontribusi waste material.\nYuk mulai upload sisa tekstilmu!',
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: controller.userContributions.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemBuilder: (context, index) {
+                final item = controller.userContributions[index];
+                return _buildMiniGrid(
+                  item['title'] ?? '',
+                  item['status'] ?? '',
+                );
+              },
+            );
+          }),
         ],
       ),
     );
@@ -158,7 +224,7 @@ class _StatItem extends StatelessWidget {
 }
 
 // --- SUB-VIEW TAMBAHAN: EDIT PROFIL ---
-class EditProfileView extends StatelessWidget {
+class EditProfileView extends GetView<ProfileController> {
   const EditProfileView({super.key});
   @override
   Widget build(BuildContext context) {
@@ -180,9 +246,9 @@ class EditProfileView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          _buildField('Nama Lengkap', 'Ahmad Setiawan'),
-          _buildField('Bio', 'Pecinta lingkungan aktif zero-waste...'),
-          _buildField('Lokasi', 'Bandung, Jawa Barat'),
+          _buildField('Nama Lengkap', controller.name.value),
+          _buildField('Bio', controller.bio.value),
+          _buildField('Lokasi', controller.location.value),
           const SizedBox(height: 24),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -210,6 +276,7 @@ class EditProfileView extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextField(
+        controller: TextEditingController(text: value),
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
@@ -220,7 +287,7 @@ class EditProfileView extends StatelessWidget {
 }
 
 // --- SUB-VIEW TAMBAHAN: PENGATURAN ---
-class SettingsView extends StatelessWidget {
+class SettingsView extends GetView<ProfileController> {
   const SettingsView({super.key});
   @override
   Widget build(BuildContext context) {
@@ -254,10 +321,7 @@ class SettingsView extends StatelessWidget {
               'Keluar Akun',
               style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
             ),
-            onTap: () {
-              Get.back();
-              Get.offAllNamed('/login');
-            },
+            onTap: () => controller.logoutAction(),
           ),
         ],
       ),

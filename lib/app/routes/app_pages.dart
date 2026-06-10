@@ -23,7 +23,7 @@ class AppPages {
   AppPages._();
 
   // Jadikan MainWrapper sebagai halaman pertama yang dibuka
-  static const INITIAL = Routes.MAIN_WRAPPER;
+  static const INITIAL = Routes.LOGIN;
 
   static final routes = [
     GetPage(
