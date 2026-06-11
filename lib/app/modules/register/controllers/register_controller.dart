@@ -5,7 +5,7 @@ import 'package:ruang_sisa/app/routes/app_pages.dart';
 class RegisterController extends GetxController {
   final _connect = GetConnect(timeout: const Duration(seconds: 15));
 
-  // URL Backend RuangSisa Vercel kamu yang sudah live
+  // URL Backend RuangSisa Vercel
   final String baseUrl = "https://ruangsisa-backend.vercel.app";
 
   // State Controller untuk menangkap teks input form
@@ -15,14 +15,19 @@ class RegisterController extends GetxController {
 
   // State loading reactive
   var isLoading = false.obs;
+  var ispasswordHidden = true.obs;
+
+  void togglePasswordVisibility() {
+    ispasswordHidden.value = !ispasswordHidden.value;
+  }
 
   void registerUser() async {
-    final username = usernameController.text.trim();
+    final name = usernameController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
     // Validasi dasar di sisi Frontend
-    if (username.isEmpty || email.isEmpty || password.isEmpty) {
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
       Get.snackbar("Peringatan", "Semua kolom input wajib diisi!");
       return;
     }
@@ -38,12 +43,7 @@ class RegisterController extends GetxController {
       // Menembak endpoint register FastAPI Vercel
       final response = await _connect.post(
         '$baseUrl/api/auth/register',
-        {
-          "name": username,
-          "username": username,
-          "email": email,
-          "password": password,
-        },
+        {"name": name, "email": email, "password": password},
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
@@ -57,31 +57,44 @@ class RegisterController extends GetxController {
           backgroundColor: Colors.white,
         );
 
-        // r
         // Tendang user balik ke halaman login setelah sukses
         Get.offAllNamed(Routes.LOGIN);
       } else {
         print("Response error: ${response.statusCode} - ${response.body}");
 
-        String errMsg = "Gagal melakukan registrasi";
+        String errMsg = "Gagal melakukan registrasi (Server Error 500)";
 
-        if (response.body != null && response.body['detail'] != null) {
-          final detail = response.body['detail'];
+        // Pengecekan ekstra aman untuk menghindari crash subtype index
+        if (response.body != null) {
+          if (response.body is Map) {
+            final detail = response.body['detail'];
 
-          // Jika detail berupa String biasa (HTTPException manual)
-          if (detail is String) {
-            errMsg = detail;
-          }
-          // Jika detail berupa List (Validasi otomatis Pydantic)
-          else if (detail is List && detail.isNotEmpty) {
-            errMsg = detail[0]['msg'] ?? "Format data tidak valid";
+            if (detail != null) {
+              if (detail is String) {
+                errMsg = detail;
+              } else if (detail is List && detail.isNotEmpty) {
+                if (detail[0] is Map) {
+                  errMsg = detail[0]['msg'] ?? "Format data tidak valid";
+                } else {
+                  errMsg = detail[0].toString();
+                }
+              } else {
+                errMsg = detail.toString();
+              }
+            }
+          } else if (response.body is String) {
+            errMsg = response.body;
           }
         }
 
-        Get.snackbar("Gagal Daftar", errMsg);
+        Get.snackbar(
+          "Gagal Daftar",
+          errMsg,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
       }
     } catch (e, stacktrace) {
-      // Baris keramat untuk melacak posisi error murni di terminal
       print("🚨 TERJADI ERROR JARINGAN FLUTTER: $e");
       print("📌 STACKTRACE: $stacktrace");
 
@@ -89,12 +102,6 @@ class RegisterController extends GetxController {
     } finally {
       isLoading(false);
     }
-  }
-
-  var ispasswordHidden = true.obs;
-
-  void togglePasswordVisibility() {
-    ispasswordHidden.value = !ispasswordHidden.value;
   }
 
   @override
