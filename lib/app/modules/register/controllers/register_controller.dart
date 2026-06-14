@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ruang_sisa/app/routes/app_pages.dart';
+import '../../../data/providers/auth_provider.dart'; // Jalur import provider
 
 class RegisterController extends GetxController {
-  final _connect = GetConnect(timeout: const Duration(seconds: 15));
-
-  // URL Backend RuangSisa Vercel
-  final String baseUrl = "https://ruangsisa-backend.vercel.app";
+  // 🎯 SEKARANG SUDAH SAMA! Memakai gerbang AuthProvider yang terpusat
+  final AuthProvider _authProvider = AuthProvider();
 
   // State Controller untuk menangkap teks input form
   final usernameController = TextEditingController();
@@ -26,79 +25,68 @@ class RegisterController extends GetxController {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
-    // Validasi dasar di sisi Frontend
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      Get.snackbar("Peringatan", "Semua kolom input wajib diisi!");
+      Get.snackbar(
+        "Peringatan",
+        "Semua kolom input wajib diisi!",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
       return;
     }
 
     if (password.length < 6) {
-      Get.snackbar("Peringatan", "Kata sandi minimal harus 6 karakter!");
+      Get.snackbar(
+        "Peringatan",
+        "Kata sandi minimal harus 6 karakter!",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
       return;
     }
 
     try {
       isLoading(true);
 
-      // Menembak endpoint register FastAPI Vercel
-      final response = await _connect.post(
-        '$baseUrl/api/auth/register',
-        {"name": name, "email": email, "password": password},
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-      );
+      // Siapkan payload JSON sesuai kontrak FastAPI backend kita
+      Map<String, dynamic> payload = {
+        "name": name,
+        "email": email,
+        "password": password,
+      };
+
+      // 🚀 Tembak menggunakan AuthProvider terpusat
+      final response = await _authProvider.registerUser(payload);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         Get.snackbar(
           "Sukses",
           "Akun kontributor RuangSisa berhasil dibuat! Silakan login.",
-          backgroundColor: Colors.white,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
         );
 
-        // Tendang user balik ke halaman login setelah sukses
+        // Lempar balik ke halaman login setelah sukses mendaftar
         Get.offAllNamed(Routes.LOGIN);
       } else {
         print("Response error: ${response.statusCode} - ${response.body}");
-
-        String errMsg = "Gagal melakukan registrasi (Server Error 500)";
-
-        // Pengecekan ekstra aman untuk menghindari crash subtype index
-        if (response.body != null) {
-          if (response.body is Map) {
-            final detail = response.body['detail'];
-
-            if (detail != null) {
-              if (detail is String) {
-                errMsg = detail;
-              } else if (detail is List && detail.isNotEmpty) {
-                if (detail[0] is Map) {
-                  errMsg = detail[0]['msg'] ?? "Format data tidak valid";
-                } else {
-                  errMsg = detail[0].toString();
-                }
-              } else {
-                errMsg = detail.toString();
-              }
-            }
-          } else if (response.body is String) {
-            errMsg = response.body;
-          }
-        }
+        String errMsg =
+            response.body?['detail'] ?? "Gagal melakukan registrasi";
 
         Get.snackbar(
           "Gagal Daftar",
           errMsg,
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.orange,
           colorText: Colors.white,
         );
       }
-    } catch (e, stacktrace) {
-      print("🚨 TERJADI ERROR JARINGAN FLUTTER: $e");
-      print("📌 STACKTRACE: $stacktrace");
-
-      Get.snackbar("Error", "Gagal terhubung ke server: $e");
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        "Gagal terhubung ke server: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     } finally {
       isLoading(false);
     }
@@ -106,10 +94,6 @@ class RegisterController extends GetxController {
 
   @override
   void onClose() {
-    // Menghapus controller dari memori biar gak bocor (memory leak)
-    usernameController.dispose();
-    emailController.dispose();
-    passwordController.dispose();
     super.onClose();
   }
 }

@@ -1,27 +1,26 @@
 import 'package:get/get.dart';
 
 class AuthProvider extends GetConnect {
-  // Ganti pakai URL Vercel produksi lu yang baru
-  final String baseUrlProduction =
-      "https://ruangsisa-backend.vercel.app/api/auth";
+  // ⚠️ ATUR BASE URL SESUAI EMULATOR / HP KAMU
+  // Gunakan 'http://10.0.2.2:8000/auth' jika pakai Emulator Android bawaan
+  // Gunakan IP Laptop kamu (misal: 'http://192.168.1.X:8000/auth') jika pakai HP Fisik
+  final String baseUrlAuth = "http://192.168.1.5:8000/auth";
 
-  // 🎯 1. Fungsi untuk Request OTP
-  Future<Response> requestOtp(String email) async {
-    final body = {"email": email};
-    return await post('$baseUrlProduction/forgot-password', body);
+  // Fungsi menembak endpoint Register
+  Future<Response> registerUser(Map<String, dynamic> data) {
+    return post('$baseUrlAuth/register', data);
   }
 
-  // 🎯 2. Fungsi untuk Eksekusi Reset Password
-  Future<Response> resetPassword(
-    String email,
-    String otpCode,
-    String newPassword,
-  ) async {
-    final body = {
-      "email": email,
-      "otp_code": otpCode,
-      "new_password": newPassword,
-    };
-    return await post('$baseUrlProduction/reset-password', body);
+  // Fungsi menembak endpoint Login
+  Future<Response> loginUser(Map<String, dynamic> data) {
+    return post('$baseUrlAuth/login', data);
+  }
+
+  // Fungsi untuk google id token ke fastapi (opsional, bisa diimplementasikan nanti jika backend sudah siap)
+  Future<Response> loginWithGoogleProvider(Map<String, dynamic> data) async {
+    final response = await post('$baseUrlAuth/google', data);
+    print("STATUS: ${response.statusCode}");
+    print("BODY: ${response.body}");
+    return response;
   }
 }

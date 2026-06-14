@@ -1,142 +1,160 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import '../../../data/providers/auth_provider.dart';
 
 class LoginController extends GetxController {
-  final box = GetStorage();
-  final _connect = GetConnect(
-    timeout: const Duration(
-      seconds: 20,
-    ), // Memberi kompensasi cold-start Vercel
-    allowAutoSignedCert: true,
-  );
+  final AuthProvider _authProvider = AuthProvider();
 
-  // URL Backend RuangSisa Vercel
-  final String baseUrl = "https://ruangsisa-backend.vercel.app";
+  // 🟢 1. Deklarasikan variabel menggunakan 'late' agar tidak langsung dibuat statis di awal
+  late final TextEditingController emailController;
+  late final TextEditingController passwordController;
 
-  // State untuk text field inputan
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
-
-  // State loading reactive
+  var rememberMe = false.obs;
   var isLoading = false.obs;
 
-  // State remember me reactive
-  var rememberMe = false.obs;
+  // 🛠️ Inisialisasi GoogleSignIn instance
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId:
+        "704950152906-bc94j0fasn2os09af328s6f26ahr44qi.apps.googleusercontent.com",
+    scopes: ['email', 'profile'],
+  );
 
-  // 🚨 1. TAMBAHAN TAKTIS: Membaca cache Remember Me saat halaman pertama kali dibuka
+  // 🟢 2. Hidupkan controller teks BARU setiap kali halaman login ini dimuat oleh GetX
   @override
   void onInit() {
     super.onInit();
-    if (box.read('remember_me') == true) {
-      rememberMe.value = true;
-      emailController.text = box.read('saved_email') ?? '';
-      passwordController.text = box.read('saved_password') ?? '';
-    }
+    emailController = TextEditingController();
+    passwordController = TextEditingController();
   }
 
-  void loginUser() async {
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
+  // --- Fungsi Login Lokal Kemarin (Tetap Dipertahankan) ---
+  void login() async {
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       Get.snackbar(
-        "Peringatan",
-        "Email/Username dan password wajib diisi!",
-        backgroundColor: Colors.white.withOpacity(0.9),
+        "Error",
+        "Email dan Password wajib diisi!",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
       return;
     }
-
     try {
-      isLoading(true);
-
-      // Menembak endpoint login FastAPI sesuai sasis Swagger UI
-      final response = await _connect.post(
-        '$baseUrl/api/auth/login',
-        {"email": email, "password": password},
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-      );
+      isLoading.value = true;
+      Map<String, dynamic> payload = {
+        "email": emailController.text.trim(),
+        "password": passwordController.text,
+      };
+      Response response = await _authProvider.loginUser(payload);
+      isLoading.value = false;
 
       if (response.statusCode == 200) {
-        // 1. Ambil token JWT hasil generate backend FastAPI
         String token = response.body['access_token'];
-        await box.write('token', token);
-
-        // 🚨 TAKTIK JALUR PINTAS JIHAD (ANTI RUN-ULANG BACKEND):
-        // Kita ambil data dari key 'name' sesuai field di model UserModel SQLAlchemy lu.
-        // Kalau di JSON root-nya kosong, baru kita fallback ke textfield inputan loginnya.
-        String userLogin =
-            response.body['name'] ??
-            (response.body['user'] != null
-                ? response.body['user']['name']
-                : null) ??
-            email;
-
-        // Tetap simpan pakai key 'username' biar ProfileController kalian gak usah dirombak lagi
-        await box.write('name', userLogin);
-
-        // 🚨 Ambil juga data bio dan location dari backend jika ada biar halaman profile gak dummy statis
-        if (response.body['bio'] != null)
-          await box.write('bio', response.body['bio']);
-        if (response.body['location'] != null)
-          await box.write('location', response.body['location']);
-
-        // 2. Eksekusi simpan/hapus kredensial berdasarkan status checkbox Remember Me
-        if (rememberMe.value) {
-          await box.write('remember_me', true);
-          await box.write('saved_email', email);
-          await box.write('saved_password', password);
-        } else {
-          await box.remove('remember_me');
-          await box.remove('saved_email');
-          await box.remove('saved_password');
-        }
-
+        String userName = response.body['user']['name'];
+        print("🔑 JWT TOKEN RUANGSISA: $token");
         Get.snackbar(
-          "Berhasil",
-          "Selamat datang kembali di RuangSisa!",
-          backgroundColor: Colors.white.withOpacity(0.9),
+          "Sukses",
+          "Selamat datang kembali, $userName!",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
         );
-
-        // Navigasi Sasis: Tendang langsung masuk ke Main Wrapper menu utama
         Get.offAllNamed('/main-wrapper');
       } else {
-        print("Response error: ${response.statusCode} - ${response.body}");
-        String errMsg = "Gagal melakukan login";
-        if (response.body != null && response.body['detail'] != null) {
-          final detail = response.body['detail'];
-          if (detail is String) {
-            errMsg = detail;
-          } else if (detail is List && detail.isNotEmpty) {
-            errMsg = detail[0]['msg'] ?? "Format data tidak valid";
-          }
-        }
-
+        String errorMsg = response.body?['detail'] ?? "Terjadi kesalahan";
         Get.snackbar(
-          "Gagal Login",
-          errMsg,
-          backgroundColor: Colors.white.withOpacity(0.9),
+          "Login Gagal",
+          errorMsg,
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
         );
       }
-    } catch (e, stacktrace) {
-      print("🚨 EROR JARINGAN LOGIN: $e");
-      print("📌 STACKTRACE LOGIN: $stacktrace");
+    } catch (e) {
+      isLoading.value = false;
       Get.snackbar(
         "Error",
-        "Gagal terhubung ke server: $e",
-        backgroundColor: Colors.white.withOpacity(0.9),
+        "Tidak dapat terhubung ke server backend!",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
-    } finally {
-      isLoading(false);
     }
   }
 
+  // 🛠️ Fungsi Login Google
+  void loginWithGoogle() async {
+    try {
+      isLoading.value = true;
+
+      if (await _googleSignIn.isSignedIn()) {
+        await _googleSignIn.signOut();
+      }
+
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        isLoading.value = false;
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+
+      if (idToken == null) {
+        isLoading.value = false;
+        Get.snackbar(
+          "Google Auth Gagal",
+          "Gagal mendapatkan ID Token dari Google.",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      Map<String, dynamic> payload = {"id_token": idToken};
+      Response response = await _authProvider.loginWithGoogleProvider(payload);
+      isLoading.value = false;
+
+      if (response.statusCode == 200) {
+        String internalToken = response.body['access_token'];
+        String userName = response.body['user']['name'];
+
+        print("🔑 JWT GOOGLE TOKEN RUANGSISA: $internalToken");
+
+        Get.snackbar(
+          "Sukses via Google",
+          "Selamat datang, $userName!",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+
+        Get.offAllNamed('/main-wrapper');
+      } else {
+        String errorMsg =
+            response.body?['detail'] ?? "Verifikasi backend gagal";
+        Get.snackbar(
+          "Google Login Gagal",
+          errorMsg,
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+        );
+      }
+    } catch (error) {
+      isLoading.value = false;
+      print("🚨 DETAIL ERROR GOOGLE SIGN IN: $error");
+      Get.snackbar(
+        "Error",
+        "Gagal melakukan Google Sign In: $error",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  // 🟢 3. Matikan secara aman pas halamannya ditutup/ditinggal permanen
   @override
   void onClose() {
+    emailController.dispose();
+    passwordController.dispose();
     super.onClose();
   }
 }

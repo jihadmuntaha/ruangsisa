@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/login_controller.dart'; // Jalur import controller bawaan GetX CLI kamu
+import '../controllers/login_controller.dart';
 
 class LoginView extends GetView<LoginController> {
   const LoginView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // 🛠️ SINKRONISASI NYATA: Dibungkus GestureDetector agar keyboard otomatis turun saat area kosong diketuk
+    // Jalur lokal untuk melacak status penyamaran kata sandi
+    final isPasswordHidden = true.obs;
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: const Color(
           0xFFE8FFF0,
-        ), // Warna latar hijau lembut khas RuangSisa
+        ), // Latar hijau lembut khas RuangSisa
         body: Stack(
           children: [
-            // 1. PERBAIKAN: Dibungkus IgnorePointer agar lingkaran hiasan tidak memblokir sentuhan jari pada tombol
+            // Lingkaran hiasan background
             Positioned(
               top: -100,
               right: -100,
@@ -35,16 +37,14 @@ class LoginView extends GetView<LoginController> {
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  // 🛠️ SINKRONISASI NYATA: Keyboard otomatis turun saat layar mulai di-scroll
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: AutofillGroup(
-                    // 🚨 TAMBAHAN SASIS: Membungkus form agar Google mengenali satu rumpun paket Autofill
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Brand Identity
+                        // Brand Identity RuangSisa
                         Container(
                           width: 64,
                           height: 64,
@@ -70,7 +70,7 @@ class LoginView extends GetView<LoginController> {
                         ),
                         const SizedBox(height: 6),
                         const Text(
-                          'Berkontribusi untuk bumi dengan sirikulasi ekonomi yang bijak.',
+                          'Berkontribusi untuk bumi dengan sirkulasi ekonomi yang bijak.',
                           style: TextStyle(color: Colors.grey, fontSize: 13),
                           textAlign: TextAlign.center,
                         ),
@@ -90,62 +90,101 @@ class LoginView extends GetView<LoginController> {
                             ],
                           ),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Input Email (Sudah dicolok hints email Google)
-                              _buildInputField(
+                              // 📥 1. INPUT EMAIL (Tanpa Obx, Anti Layar Merah)
+                              const Text(
                                 'Email atau Nama Pengguna',
-                                Icons.person_outline,
-                                'nama@email.com',
-                                textController: controller.emailController,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: Color(0xFF404943),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              TextField(
+                                controller: controller.emailController,
+                                autofillHints: const [
+                                  AutofillHints.email,
+                                  AutofillHints.username,
+                                ],
+                                decoration: InputDecoration(
+                                  hintText: 'nama@email.com',
+                                  prefixIcon: Icon(
+                                    Icons.person_outline,
+                                    color: Colors.grey[600],
+                                  ),
+                                  filled: true,
+                                  fillColor: const Color(0xFFF8F9FA),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
                               ),
                               const SizedBox(height: 16),
 
-                              // Input Password (Sudah dicolok hints password Google)
-                              _buildInputField(
+                              // 📥 2. INPUT PASSWORD (Obx hanya membungkus bagian yang berubah)
+                              const Text(
                                 'Kata Sandi',
-                                Icons.lock_outline,
-                                '••••••••',
-                                isPassword: true,
-                                textController: controller.passwordController,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: Color(0xFF404943),
+                                ),
                               ),
+                              const SizedBox(height: 6),
+                              Obx(
+                                () => TextField(
+                                  controller: controller.passwordController,
+                                  obscureText: isPasswordHidden.value,
+                                  autofillHints: const [AutofillHints.password],
+                                  decoration: InputDecoration(
+                                    hintText: '••••••••',
+                                    prefixIcon: Icon(
+                                      Icons.lock_outline,
+                                      color: Colors.grey[600],
+                                    ),
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        isPasswordHidden.value
+                                            ? Icons.visibility_off_outlined
+                                            : Icons.visibility_outlined,
+                                        color: Colors.grey,
+                                      ),
+                                      onPressed: () => isPasswordHidden.value =
+                                          !isPasswordHidden.value,
+                                    ),
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8F9FA),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
 
-                              // 🚨 PERBAIKAN SINKRONISASI: Menyatukan Simpan Password (Ingat Saya) dan Lupa Password
+                              // Row Simpan Password & Lupa Password
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  // Sisi Kiri: Checkbox Simpan Password (Dibungkus Obx agar interaksinya reaktif real-time)
-                                  Obx(() {
-                                    return Row(
-                                      children: [
-                                        SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: Checkbox(
-                                            activeColor: const Color(
-                                              0xFF2D6A4F,
-                                            ),
-                                            value: controller.rememberMe.value,
-                                            onChanged: (value) {
-                                              controller.rememberMe.value =
-                                                  value ?? false;
-                                            },
-                                          ),
+                                  Row(
+                                    children: [
+                                      SizedBox(width: 24, height: 24),
+                                      const SizedBox(width: 4),
+                                      const Text(
+                                        'Ingat Saya',
+                                        style: TextStyle(
+                                          color: Color(0xFF404943),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
                                         ),
-                                        const SizedBox(width: 4),
-                                        const Text(
-                                          'Ingat Saya',
-                                          style: TextStyle(
-                                            color: Color(0xFF404943),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  }),
-
-                                  // Sisi Kanan: Tombol Lupa Password bawaan visual kelompokmu
+                                      ),
+                                    ],
+                                  ),
                                   TextButton(
                                     onPressed: () {},
                                     child: const Text(
@@ -161,7 +200,7 @@ class LoginView extends GetView<LoginController> {
                               ),
                               const SizedBox(height: 12),
 
-                              // Tombol Masuk Utama (Reactive)
+                              // Tombol Masuk Form Manual
                               SizedBox(
                                 width: double.infinity,
                                 height: 52,
@@ -183,8 +222,7 @@ class LoginView extends GetView<LoginController> {
                                             ),
                                             elevation: 0,
                                           ),
-                                          onPressed: () =>
-                                              controller.loginUser(),
+                                          onPressed: () => controller.login(),
                                           child: const Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
@@ -210,7 +248,7 @@ class LoginView extends GetView<LoginController> {
                               ),
                               const SizedBox(height: 20),
 
-                              // Pembatas Atau
+                              // Pembatas Atau Masuk Dengan
                               const Row(
                                 children: [
                                   Expanded(child: Divider()),
@@ -231,60 +269,95 @@ class LoginView extends GetView<LoginController> {
                               ),
                               const SizedBox(height: 16),
 
-                              // BIOMETRIC FACE ID BUTTON
-                              GestureDetector(
-                                onTap: () {
-                                  Get.snackbar(
-                                    'Face ID',
-                                    'Memindai wajah kontributor RuangSisa...',
-                                    backgroundColor: Colors.white,
-                                  );
-                                },
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Colors.grey[300]!,
-                                      style: BorderStyle.solid,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: const BoxDecoration(
-                                          color: Color(0xFFE8FFF0),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.face_unlock_rounded,
-                                          color: Color(0xFF2D6A4F),
-                                          size: 28,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      const Text(
-                                        'Login dengan Face ID',
-                                        style: TextStyle(
-                                          color: Color(0xFF404943),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                              // TOMBOL GOOGLE SIGN-IN
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: Obx(() {
+                                  return controller.isLoading.value
+                                      ? const SizedBox.shrink()
+                                      : OutlinedButton.icon(
+                                          icon: const Icon(
+                                            Icons.g_mobiledata_rounded,
+                                            size: 30,
+                                            color: Colors.redAccent,
+                                          ),
+                                          label: const Text(
+                                            'Masuk dengan Google',
+                                            style: TextStyle(
+                                              color: Color(0xFF404943),
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          style: OutlinedButton.styleFrom(
+                                            side: BorderSide(
+                                              color: Colors.grey[300]!,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          onPressed: () =>
+                                              controller.loginWithGoogle(),
+                                        );
+                                }),
                               ),
+                              const SizedBox(height: 12),
+
+                              // TOMBOL BIOMETRIC FACE ID
+                              Obx(() {
+                                return controller.isLoading.value
+                                    ? const SizedBox.shrink()
+                                    : GestureDetector(
+                                        onTap: () {
+                                          Get.snackbar(
+                                            'Face ID',
+                                            'Memindai wajah kontributor RuangSisa...',
+                                            backgroundColor: Colors.white,
+                                          );
+                                        },
+                                        child: Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.grey[300]!,
+                                            ),
+                                          ),
+                                          child: const Column(
+                                            children: [
+                                              Icon(
+                                                Icons.face_unlock_rounded,
+                                                color: Color(0xFF2D6A4F),
+                                                size: 24,
+                                              ),
+                                              SizedBox(height: 4),
+                                              Text(
+                                                'Login dengan Face ID',
+                                                style: TextStyle(
+                                                  color: Color(0xFF404943),
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                              }),
                             ],
                           ),
                         ),
                         const SizedBox(height: 24),
 
-                        // Footer Navigation Link
+                        // Footer Menuju Halaman Register
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -314,65 +387,6 @@ class LoginView extends GetView<LoginController> {
           ],
         ),
       ),
-    );
-  }
-
-  // 2. PERBAIKAN: Mengintegrasikan Obx lokal agar icon mata berfungsi penuh secara independen
-  Widget _buildInputField(
-    String label,
-    IconData icon,
-    String hint, {
-    bool isPassword = false,
-    required TextEditingController textController,
-  }) {
-    final isHidden = isPassword.obs;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-            color: Color(0xFF404943),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Obx(() {
-          return TextField(
-            controller: textController,
-            obscureText: isHidden.value,
-
-            // 🚨 SUNTIKAN MANANTRA SAKTI NATIVE AUTOFILL GOOGLE KASTA TERTINGGI 🚨
-            autofillHints: isPassword
-                ? const [AutofillHints.password]
-                : const [AutofillHints.email, AutofillHints.username],
-
-            decoration: InputDecoration(
-              hintText: hint,
-              prefixIcon: Icon(icon, color: Colors.grey[600]),
-              suffixIcon: isPassword
-                  ? IconButton(
-                      icon: Icon(
-                        isHidden.value
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: Colors.grey,
-                      ),
-                      onPressed: () => isHidden.value = !isHidden.value,
-                    )
-                  : null,
-              filled: true,
-              fillColor: const Color(0xFFF8F9FA),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          );
-        }),
-      ],
     );
   }
 }

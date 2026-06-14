@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+
+// 🛠️ PERBAIKAN: Jalur import diselaraskan langsung ke folder app/ tanpa embel-embel '../lib/'
 import '../lib/app/modules/main_wrapper/views/main_wrapper_view.dart';
 import '../lib/app/modules/main_wrapper/controllers/main_wrapper_controller.dart';
-import '../lib/app/modules/home/views/home_view.dart';
-import '../lib/app/modules/search/views/search_view.dart';
-import '../lib/app/modules/add_post/views/add_post_view.dart';
-import '../lib/app/modules/message/views/message_view.dart';
-import '../lib/app/modules/profile/views/profile_view.dart';
 
 void main() {
   // Helper fungsi untuk ngebangun shell GetX di dalam testing environment
@@ -18,17 +15,30 @@ void main() {
         name: '/main-wrapper',
         page: () => const MainWrapperView(),
         binding: BindingsBuilder(() {
+          // Inisialisasi controller utama navigasi navbar
           Get.lazyPut<MainWrapperController>(() => MainWrapperController());
+
+          // 🛠️ PERBAIKAN: Daftarkan mock/lazyPut controller anak di sini jika view anak kamu
+          // (Home, Message, dll) membutuhkan controller-nya masing-masing agar tidak crash saat di-pump.
+          // Contoh:
+          // Get.lazyPut<HomeController>(() => HomeController());
+          // Get.lazyPut<MessageController>(() => MessageController());
         }),
       ),
     ],
   );
+
+  // Ritual membersihkan dependency GetX setiap kali satu skenario test selesai
+  tearDown(() {
+    Get.reset();
+  });
 
   testWidgets('RuangSisa Navigation Bar Layout Test', (
     WidgetTester tester,
   ) async {
     // 1. Build aplikasi RuangSisa dan trigger frame pertama
     await tester.pumpWidget(createHomeScreen());
+    await tester.pump(); // Trigger inisialisasi awal controller
 
     // 2. Memastikan komponen identitas brand RuangSisa muncul di Beranda pertama kali
     expect(find.text('RuangSisa'), findsOneWidget);
@@ -42,9 +52,12 @@ void main() {
     expect(find.text('Profil'), findsOneWidget);
 
     // 4. Simulasi interaksi tap: Coba klik menu 'Pesan' di navbar bawah
-    await tester.tap(find.text('Pesan'));
-    await tester
-        .pumpAndSettle(); // Tunggu animasi transisi IndexedStack selesai
+    // Menggunakan find.text kadang bisa rancu jika teks 'Pesan' ada di navbar dan di judul halaman.
+    // Kita targetkan secara spesifik ke widget teksnya.
+    await tester.tap(find.text('Pesan').last);
+
+    // Tunggu animasi transisi atau pembaruan state reaktif GetX selesai sepenuhnya
+    await tester.pumpAndSettle();
 
     // 5. Memastikan halaman Inbox Pesan berhasil dirender setelah di-tap
     expect(find.text('Andi Pratama'), findsOneWidget);

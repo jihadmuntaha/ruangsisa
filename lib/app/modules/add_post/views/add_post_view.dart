@@ -1,342 +1,284 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
-// Kontroler lokal reaktif khusus untuk mengatur UI form postingan
-class AddPostViewController extends GetxController {
-  var selectedType = 'Barter'.obs;
-  var selectedCategory = ''.obs;
-
-  void setType(String type) => selectedType.value = type;
-  void setCategory(String category) => selectedCategory.value = category;
-}
+import 'package:image_picker/image_picker.dart'; // ◄ Import source kamera/galeri
+import '../controllers/add_post_controller.dart';
 
 class AddPostView extends StatelessWidget {
-  const AddPostView({super.key});
+  const AddPostView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Inject kontroler agar Obx di bawah bisa mendeteksi perubahan state
-    final uiController = Get.put(AddPostViewController());
-
-    final List<String> categories = [
-      'Perabotan',
-      'Elektronik',
-      'Pakaian',
-      'Buku',
-      'Lainnya',
-    ];
+    final AddPostController controller = Get.put(AddPostController());
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      // --- APP BAR ---
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: const Text(
-          'Post Baru',
+          'Post Barang Sisa',
           style: TextStyle(
-            color: Color(0xFF0F5238),
+            color: Color(0xFF2D6A4F),
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 0.5,
+        centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF2D6A4F)),
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.all(20),
           children: [
-            // --- UPLOAD FOTO BARANG ---
+            // 📸 🟢 BARU: COMPONENT BOX PICKER FOTO BARANG (Paling Atas)
             const Text(
-              'Foto Barang',
+              'Foto Kondisi Barang',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: Color(0xFF404943),
+                color: Color(0xFF002114),
               ),
             ),
-            const SizedBox(height: 10),
-            GridValuesArea(),
-            const SizedBox(height: 6),
-            const Text(
-              'Unggah maksimal 5 foto barang Anda.',
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // --- TIPE POSTINGAN (Segmented Control) ---
-            const Text(
-              'Tipe Postingan',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: Color(0xFF404943),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Obx(
-                () => Row(
-                  children: ['Barter', 'Dijual', 'Donasi'].map((type) {
-                    bool isSelected = uiController.selectedType.value == type;
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () => uiController.setType(type),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? const Color(0xFF2D6A4F)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(24),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () {
+                // Muncukin pilihan ambil gambar dari bawah layar HP
+                Get.bottomSheet(
+                  Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.all(16),
+                    child: Wrap(
+                      children: [
+                        ListTile(
+                          leading: const Icon(
+                            Icons.camera_alt,
+                            color: Color(0xFF2D6A4F),
                           ),
-                          child: Text(
-                            type,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: isSelected
-                                  ? Colors.white
-                                  : const Color(0xFF404943),
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              fontSize: 13,
-                            ),
-                          ),
+                          title: const Text('Jepret Kamera Langsung'),
+                          onTap: () {
+                            Get.back();
+                            controller.pickImage(ImageSource.camera);
+                          },
                         ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // --- INPUT TEXT FIELDS ---
-            _buildInputField('Judul Barang', 'Contoh: Kursi Kayu Jati Bekas'),
-            const SizedBox(height: 16),
-
-            // --- CHIP KATEGORI ---
-            const Text(
-              'Kategori',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: Color(0xFF404943),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: categories.map((cat) {
-                return Obx(() {
-                  bool isSelected = uiController.selectedCategory.value == cat;
-                  return ChoiceChip(
-                    label: Text(cat),
-                    selected: isSelected,
-                    onSelected: (bool selected) {
-                      if (selected) uiController.setCategory(cat);
-                    },
-                    selectedColor: const Color(
-                      0xFF2D6A4F,
-                    ).withValues(alpha: 0.15),
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? const Color(0xFF2D6A4F)
-                          : const Color(0xFF404943),
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      fontSize: 12,
+                        ListTile(
+                          leading: const Icon(
+                            Icons.photo_library,
+                            color: Color(0xFF2D6A4F),
+                          ),
+                          title: const Text('Ambil dari Galeri HP'),
+                          onTap: () {
+                            Get.back();
+                            controller.pickImage(ImageSource.gallery);
+                          },
+                        ),
+                      ],
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(
-                        color: isSelected
-                            ? const Color(0xFF2D6A4F)
-                            : Colors.grey[300]!,
+                  ),
+                );
+              },
+              child: Obx(() {
+                // Jika belum pilih foto, tampilkan placeholder abu-abu minimalis
+                if (controller.selectedImagePath.value.isEmpty) {
+                  return Container(
+                    height: 150,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.grey.withOpacity(0.5),
+                        style: BorderStyle.solid,
                       ),
                     ),
-                    showCheckmark: false,
-                    backgroundColor: Colors.white,
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_a_photo_outlined,
+                          size: 40,
+                          color: Color(0xFF2D6A4F),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Tambahkan Foto Barang',
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                      ],
+                    ),
                   );
-                });
-              }).toList(),
+                } else {
+                  // Jika foto sudah dipilih, render preview foto aslinya di kotak form!
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      File(controller.selectedImagePath.value),
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  );
+                }
+              }),
             ),
             const SizedBox(height: 20),
 
-            _buildInputField(
-              'Deskripsi',
-              'Ceritakan kondisi barang Anda dan alasan melepasnya...',
-              maxLines: 4,
+            // 🏷️ 1. PILIH JENIS KONTRIBUSI (Donasi / Barter / Dijual)
+            const Text(
+              'Jenis Kontribusi',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF002114),
+              ),
             ),
-            const SizedBox(height: 16),
-
-            // --- INPUT KONDISIONAL BERBASIS STATE ---
-            Obx(() {
-              if (uiController.selectedType.value == 'Donasi') {
-                return const SizedBox(); // Donasi tidak butuh input tambahan harga/wishlist
-              }
-              bool isDijual = uiController.selectedType.value == 'Dijual';
-              return _buildInputField(
-                isDijual ? 'Harga (Rp)' : 'Ingin Barter Dengan',
-                isDijual
-                    ? 'Contoh: 50000'
-                    : 'Sebutkan barang yang Anda inginkan...',
-                isNumber: isDijual,
-              );
-            }),
-            const SizedBox(height: 32),
-
-            // --- BUTTON SUBMIT ---
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2D6A4F),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 0,
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: controller.selectedType.value,
+                  isExpanded: true,
+                  items: controller.postTypes.map((String type) {
+                    return DropdownMenuItem<String>(
+                      value: type,
+                      child: Text(type),
+                    );
+                  }).toList(),
+                  onChanged: (value) => controller.selectedType(value),
                 ),
-                onPressed: () {
-                  Get.snackbar(
-                    'Sukses',
-                    'Kontribusi sirkular kamu berhasil diposting!',
-                    backgroundColor: Colors.white,
-                  );
-                },
-                icon: const Icon(
-                  Icons.send_rounded,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ✍️ 2. INPUT JUDUL BARANG
+            const Text(
+              'Nama / Judul Barang',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF002114),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller.titleController,
+              decoration: InputDecoration(
+                hintText: 'Misal: Sisa Kain Katun Rayon Premium',
+                fillColor: Colors.white,
+                filled: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ✍️ 3. INPUT DESKRIPSI & KONDISI BARANG
+            const Text(
+              'Deskripsi & Minus Barang',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF002114),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller.descController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText:
+                    'Jelaskan volume sisa, kondisi fisik, atau pemakaian...',
+                fillColor: Colors.white,
+                filled: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // 🌟 LOGIKA DINAMIS FIELD BERDASARKAN ATURAN BISNIS PLATFORM LU 🌟
+            if (controller.selectedType.value == 'Dijual') ...[
+              const Text(
+                'Harga Nominal (Rp)',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF002114),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller.priceController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'Masukkan nominal, misal: 25000',
+                  fillColor: Colors.white,
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            if (controller.selectedType.value == 'Barter') ...[
+              const Text(
+                'Mau Barter Dengan Apa?',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF002114),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller.wishlistController,
+                decoration: InputDecoration(
+                  hintText: 'Misal: Tukar pakan kucing / tanaman hias',
+                  fillColor: Colors.white,
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            // 📤 4. TOMBOL EKSEKUSI UTAMA
+            const SizedBox(height: 12),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2D6A4F),
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              onPressed: () => controller.submitPost(),
+              child: const Text(
+                'Postkan ke RuangSisa',
+                style: TextStyle(
                   color: Colors.white,
-                  size: 18,
-                ),
-                label: const Text(
-                  'Posting Sekarang',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputField(
-    String label,
-    String hint, {
-    int maxLines = 1,
-    bool isNumber = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-            color: Color(0xFF404943),
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          maxLines: maxLines,
-          keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-          style: const TextStyle(fontSize: 14),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
-            filled: true,
-            fillColor: const Color(0xFFF8F9FA),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// Widget internal untuk layout deretan slot foto paking rapi
-class GridValuesArea extends StatelessWidget {
-  const GridValuesArea({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF3F4F6),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.grey[300]!,
-              style: BorderStyle.solid,
-            ),
-          ),
-          child: const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.add_a_photo_outlined,
-                color: Color(0xFF2D6A4F),
-                size: 24,
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Tambah',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Color(0xFF2D6A4F),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 10),
-        _buildMiniPlaceholder(),
-        const SizedBox(width: 10),
-        _buildMiniPlaceholder(),
-      ],
-    );
-  }
-
-  Widget _buildMiniPlaceholder() {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Icon(Icons.image_outlined, color: Colors.grey[300], size: 28),
+        );
+      }),
     );
   }
 }
