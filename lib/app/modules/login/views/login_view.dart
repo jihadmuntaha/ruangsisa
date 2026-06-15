@@ -173,7 +173,7 @@ class LoginView extends GetView<LoginController> {
                                 children: [
                                   Row(
                                     children: [
-                                      SizedBox(width: 24, height: 24),
+                                      const SizedBox(width: 24, height: 24),
                                       const SizedBox(width: 4),
                                       const Text(
                                         'Ingat Saya',
@@ -186,7 +186,10 @@ class LoginView extends GetView<LoginController> {
                                     ],
                                   ),
                                   TextButton(
-                                    onPressed: () {},
+                                    onPressed: () {
+                                      // AKTIF: Berpindah ke Halaman Forgot Password
+                                      Get.toNamed('/forgot-password');
+                                    },
                                     child: const Text(
                                       'Lupa Password?',
                                       style: TextStyle(
