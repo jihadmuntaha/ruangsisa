@@ -1,11 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart'; // ◄ Import source kamera/galeri
 import '../controllers/add_post_controller.dart';
 
 class AddPostView extends StatelessWidget {
-  const AddPostView({Key? key}) : super(key: key);
+  const AddPostView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +35,7 @@ class AddPostView extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            // 📸 🟢 BARU: COMPONENT BOX PICKER FOTO BARANG (Paling Atas)
+            // 📸 BOX PICKER FOTO
             const Text(
               'Foto Kondisi Barang',
               style: TextStyle(
@@ -47,7 +46,6 @@ class AddPostView extends StatelessWidget {
             const SizedBox(height: 8),
             GestureDetector(
               onTap: () {
-                // Muncukin pilihan ambil gambar dari bawah layar HP
                 Get.bottomSheet(
                   Container(
                     color: Colors.white,
@@ -62,7 +60,7 @@ class AddPostView extends StatelessWidget {
                           title: const Text('Jepret Kamera Langsung'),
                           onTap: () {
                             Get.back();
-                            controller.pickImage(ImageSource.camera);
+                            controller.pickImageFromCamera();
                           },
                         ),
                         ListTile(
@@ -73,7 +71,7 @@ class AddPostView extends StatelessWidget {
                           title: const Text('Ambil dari Galeri HP'),
                           onTap: () {
                             Get.back();
-                            controller.pickImage(ImageSource.gallery);
+                            controller.pickImageFromGallery();
                           },
                         ),
                       ],
@@ -82,7 +80,6 @@ class AddPostView extends StatelessWidget {
                 );
               },
               child: Obx(() {
-                // Jika belum pilih foto, tampilkan placeholder abu-abu minimalis
                 if (controller.selectedImagePath.value.isEmpty) {
                   return Container(
                     height: 150,
@@ -90,7 +87,7 @@ class AddPostView extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Colors.grey.withOpacity(0.5),
+                        color: Colors.grey.withAlpha(128),
                         style: BorderStyle.solid,
                       ),
                     ),
@@ -111,7 +108,6 @@ class AddPostView extends StatelessWidget {
                     ),
                   );
                 } else {
-                  // Jika foto sudah dipilih, render preview foto aslinya di kotak form!
                   return ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.file(
@@ -126,7 +122,7 @@ class AddPostView extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // 🏷️ 1. PILIH JENIS KONTRIBUSI (Donasi / Barter / Dijual)
+            // 🏷️ JENIS KONTRIBUSI (Donasi / Dijual)
             const Text(
               'Jenis Kontribusi',
               style: TextStyle(
@@ -145,19 +141,79 @@ class AddPostView extends StatelessWidget {
                 child: DropdownButton<String>(
                   value: controller.selectedType.value,
                   isExpanded: true,
-                  items: controller.postTypes.map((String type) {
-                    return DropdownMenuItem<String>(
-                      value: type,
-                      child: Text(type),
-                    );
-                  }).toList(),
-                  onChanged: (value) => controller.selectedType(value),
+                  items: const [
+                    DropdownMenuItem(value: 'donation', child: Text('Donasi')),
+                    DropdownMenuItem(value: 'sale', child: Text('Dijual')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      controller.changePostType(value);
+                    }
+                  },
                 ),
               ),
             ),
             const SizedBox(height: 20),
 
-            // ✍️ 2. INPUT JUDUL BARANG
+            // 🆕 DROPDOWN KATEGORI (PILIHAN, BUKAN INPUT TEXT!)
+            const Text(
+              'Kategori Barang',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF002114),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: Obx(() {
+                  // Tampilkan loading kalau kategori belum ke-load
+                  if (controller.categories.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    );
+                  }
+
+                  return DropdownButton<int>(
+                    value: controller.selectedCategoryId.value,
+                    isExpanded: true,
+                    hint: const Text('Pilih Kategori'),
+                    items: controller.categories.map((category) {
+                      return DropdownMenuItem<int>(
+                        value: category['id'],
+                        child: Row(
+                          children: [
+                            Icon(
+                              _getIconForCategory(category['name']),
+                              size: 20,
+                              color: Color(0xFF2D6A4F),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(category['name']),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        controller.selectedCategoryId.value = value;
+                      }
+                    },
+                  );
+                }),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ✍️ JUDUL BARANG
             const Text(
               'Nama / Judul Barang',
               style: TextStyle(
@@ -169,7 +225,7 @@ class AddPostView extends StatelessWidget {
             TextField(
               controller: controller.titleController,
               decoration: InputDecoration(
-                hintText: 'Misal: Sisa Kain Katun Rayon Premium',
+                hintText: 'Misal: Sisa Kain Katun Premium',
                 fillColor: Colors.white,
                 filled: true,
                 border: OutlineInputBorder(
@@ -180,9 +236,9 @@ class AddPostView extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // ✍️ 3. INPUT DESKRIPSI & KONDISI BARANG
+            // 📝 DESKRIPSI
             const Text(
-              'Deskripsi & Minus Barang',
+              'Deskripsi & Kondisi Barang',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF002114),
@@ -193,8 +249,7 @@ class AddPostView extends StatelessWidget {
               controller: controller.descController,
               maxLines: 4,
               decoration: InputDecoration(
-                hintText:
-                    'Jelaskan volume sisa, kondisi fisik, atau pemakaian...',
+                hintText: 'Jelaskan kondisi, volume sisa, atau pemakaian...',
                 fillColor: Colors.white,
                 filled: true,
                 border: OutlineInputBorder(
@@ -205,10 +260,10 @@ class AddPostView extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // 🌟 LOGIKA DINAMIS FIELD BERDASARKAN ATURAN BISNIS PLATFORM LU 🌟
-            if (controller.selectedType.value == 'Dijual') ...[
+            // FIELD DINAMIS (HARGA untuk SALE)
+            if (controller.selectedType.value == 'sale') ...[
               const Text(
-                'Harga Nominal (Rp)',
+                'Harga (Rp)',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF002114),
@@ -219,9 +274,10 @@ class AddPostView extends StatelessWidget {
                 controller: controller.priceController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  hintText: 'Masukkan nominal, misal: 25000',
+                  hintText: 'Masukkan harga, misal: 50000',
                   fillColor: Colors.white,
                   filled: true,
+                  prefixText: 'Rp ',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -231,54 +287,56 @@ class AddPostView extends StatelessWidget {
               const SizedBox(height: 20),
             ],
 
-            if (controller.selectedType.value == 'Barter') ...[
-              const Text(
-                'Mau Barter Dengan Apa?',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF002114),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: controller.wishlistController,
-                decoration: InputDecoration(
-                  hintText: 'Misal: Tukar pakan kucing / tanaman hias',
-                  fillColor: Colors.white,
-                  filled: true,
-                  border: OutlineInputBorder(
+            // TOMBOL POST
+            Obx(
+              () => ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2D6A4F),
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-            ],
-
-            // 📤 4. TOMBOL EKSEKUSI UTAMA
-            const SizedBox(height: 12),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2D6A4F),
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              onPressed: () => controller.submitPost(),
-              child: const Text(
-                'Postkan ke RuangSisa',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
+                onPressed: controller.isLoading.value
+                    ? null
+                    : () => controller.submitPost(),
+                child: controller.isLoading.value
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Post Material Sisa',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],
         );
       }),
     );
+  }
+
+  // Helper function untuk icon berdasarkan kategori
+  IconData _getIconForCategory(String categoryName) {
+    switch (categoryName) {
+      case 'Pakaian':
+        return Icons.checkroom;
+      case 'Elektronik':
+        return Icons.phone_android;
+      case 'Furnitur':
+        return Icons.chair;
+      case 'Buku':
+        return Icons.menu_book;
+      default:
+        return Icons.category;
+    }
   }
 }

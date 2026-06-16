@@ -9,9 +9,7 @@ class HomeView extends StatelessWidget {
   Widget build(BuildContext context) {
     final HomeController controller = Get.put(HomeController());
 
-    // Alamat IP Backend laptop lu untuk jalur rendering gambar statis
-    const String ipLaptop =
-        "192.168.1.5"; // ◄ SESUAIKAN DENGAN IP LAPTOP LU, BEH!
+    final String baseUrl = "http://172.24.243.45:8000";
 
     final List<Map<String, dynamic>> categories = [
       {'id': null, 'name': 'Semua', 'icon': Icons.grid_view},
@@ -22,10 +20,7 @@ class HomeView extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(
-        0xFFF3F4F6,
-      ), // Background abu-abu soft khas sosmed
-      // --- TOP APP BAR ---
+      backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
         title: const Row(
           children: [
@@ -45,20 +40,46 @@ class HomeView extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0.5,
         actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.notifications_none_rounded,
-              color: Colors.black,
-              size: 26,
+          Obx(
+            () => Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_none_rounded, size: 26),
+                  onPressed: () {},
+                ),
+                if (controller.unreadCount.value > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '${controller.unreadCount.value}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            onPressed: () {},
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
-          // --- CATEGORY FILTERS ---
+          // Category Filters
           Container(
             height: 60,
             color: Colors.white,
@@ -68,21 +89,27 @@ class HomeView extends StatelessWidget {
               itemCount: categories.length,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemBuilder: (context, index) {
-                bool isAll = index == 0;
+                final isSelected =
+                    controller.selectedCategoryId.value ==
+                    categories[index]['id'];
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ActionChip(
                     avatar: Icon(
                       categories[index]['icon'],
                       size: 16,
-                      color: isAll ? Colors.white : const Color(0xFF404943),
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFF404943),
                     ),
                     label: Text(categories[index]['name']),
-                    backgroundColor: isAll
+                    backgroundColor: isSelected
                         ? const Color(0xFF2D6A4F)
                         : const Color(0xFFC1ECD4).withOpacity(0.4),
                     labelStyle: TextStyle(
-                      color: isAll ? Colors.white : const Color(0xFF404943),
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFF404943),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -91,6 +118,8 @@ class HomeView extends StatelessWidget {
                     ),
                     side: BorderSide.none,
                     onPressed: () {
+                      controller.selectedCategoryId.value =
+                          categories[index]['id'];
                       controller.fetchTimelinePosts(
                         categoryId: categories[index]['id'],
                       );
@@ -101,7 +130,7 @@ class HomeView extends StatelessWidget {
             ),
           ),
 
-          // --- TIMELINE FEED LIST (MODEL MEDIA SOSIAL MODERN) ---
+          // Timeline Feed
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value && controller.postsList.isEmpty) {
@@ -111,8 +140,26 @@ class HomeView extends StatelessWidget {
               }
 
               if (controller.postsList.isEmpty) {
-                return const Center(
-                  child: Text('Belum ada barang sisa yang diposting, Beh!'),
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Belum ada barang sisa yang diposting',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton(
+                        onPressed: () => Get.toNamed('/add-post'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2D6A4F),
+                        ),
+                        child: const Text('Posting Sekarang'),
+                      ),
+                    ],
+                  ),
                 );
               }
 
@@ -127,28 +174,16 @@ class HomeView extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final post = controller.postsList[index];
 
-                    // 1. Ambil Nama User Dinamis dari Relasi Backend Lu, Beh!
                     String ownerName = "User RuangSisa";
-
-                    // 📡 RADAR PELACAK: Cetak isi JSON postingan ke Debug Console VS Code lu
-                    print("DEBUG JSON POSTINGAN KE-$index: ${post.toString()}");
-
-                    if (post['user'] != null) {
-                      if (post['user']['name'] != null) {
-                        ownerName = post['user']['name'];
-                      } else if (post['user']['username'] != null) {
-                        ownerName =
-                            post['user']['username']; // ◄ Cadangan 1: Kalau backend pake username
+                    if (post['author'] != null) {
+                      if (post['author']['name'] != null) {
+                        ownerName = post['author']['name'];
                       }
-                    } else if (post['username'] != null) {
-                      ownerName =
-                          post['username']; // ◄ Cadangan 2: Kalau backend narik data langsung tanpa nested object
-                    } else if (post['user_name'] != null) {
-                      ownerName =
-                          post['user_name']; // ◄ Cadangan 3: Kalau di JSON namanya user_name
+                    } else if (post['user'] != null &&
+                        post['user']['name'] != null) {
+                      ownerName = post['user']['name'];
                     }
 
-                    // Setup Label Aksi Utama C2C
                     String labelTombol = 'Ambil';
                     if (post['post_type'] == 'Barter') labelTombol = 'Tawarkan';
                     if (post['post_type'] == 'Dijual') labelTombol = 'Beli';
@@ -159,30 +194,44 @@ class HomeView extends StatelessWidget {
                       formatPrice = 'Rp ${post['price']}';
                     }
 
-                    // 2. BANGUN URL GAMBAR DINAMIS DARI SERVER LAPTOP
                     String? finalImageUrl;
-                    if (post['images'] != null &&
-                        post['images'].isNotEmpty &&
-                        post['images'] != 'foto_barang_default.png') {
-                      // Mengarah ke folder static uploads FastAPI lu via Wi-Fi
-                      finalImageUrl =
-                          "http://$ipLaptop:8000/static/uploads/${post['images']}";
+                    if (post['images'] != null && post['images'].isNotEmpty) {
+                      String imagePath = post['images'];
+                      if (imagePath.startsWith('/uploads/')) {
+                        finalImageUrl =
+                            "$baseUrl${imagePath.replaceFirst('/uploads', '/uploads')}";
+                      } else {
+                        finalImageUrl = "$baseUrl/uploads/$imagePath";
+                      }
                     }
 
-                    return FeedSosmedCard(
-                      name: ownerName,
-                      type: post['post_type'] ?? 'Donasi',
-                      title: post['title'] ?? 'Tanpa Judul',
-                      desc: post['description'] ?? '',
-                      price: formatPrice,
-                      btnLabel: labelTombol,
-                      imageUrl: finalImageUrl,
-                      onChatPressed: () {
-                        // 3. TERUSKAN KE CHAT PEMILIK BARANG
-                        print("Hubungi pemilik barang bernama: $ownerName");
-                        // Nanti kalau modul message lu udah aktif tinggal lempar route:
-                        // Get.toNamed('/message', arguments: {'user_id': post['user_id'], 'name': ownerName});
+                    return GestureDetector(
+                      onTap: () {
+                        Get.toNamed(
+                          '/post-detail',
+                          arguments: {'post_id': post['id']},
+                        );
                       },
+                      child: FeedSosmedCard(
+                        postId: post['id'], // ✅ KIRIM postId
+                        name: ownerName,
+                        type: post['post_type'] ?? 'Donasi',
+                        title: post['title'] ?? 'Tanpa Judul',
+                        desc: post['description'] ?? '',
+                        price: formatPrice,
+                        btnLabel: labelTombol,
+                        imageUrl: finalImageUrl,
+                        onChatPressed: () {
+                          Get.toNamed(
+                            '/chat',
+                            arguments: {
+                              'user_id': post['user_id'],
+                              'name': ownerName,
+                              'post_id': post['id'],
+                            },
+                          );
+                        },
+                      ),
                     );
                   },
                 ),
@@ -195,7 +244,7 @@ class HomeView extends StatelessWidget {
   }
 }
 
-// --- 🛠️ UPGRADE TOTAL: KOMPONEN KARTU SOSIAL MEDIA PREMIUM ---
+// Feed Card Component - Sudah Diperbaiki
 class FeedSosmedCard extends StatelessWidget {
   final String name;
   final String type;
@@ -205,6 +254,7 @@ class FeedSosmedCard extends StatelessWidget {
   final String? price;
   final String? imageUrl;
   final VoidCallback onChatPressed;
+  final int postId; // ✅ TAMBAHKAN
 
   const FeedSosmedCard({
     Key? key,
@@ -216,11 +266,11 @@ class FeedSosmedCard extends StatelessWidget {
     required this.onChatPressed,
     this.price,
     this.imageUrl,
+    required this.postId, // ✅ TAMBAHKAN
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Styling Badge kontribusi biar eye-catching
     Color badgeColor = const Color(0xFFE8FFF0);
     Color textColor = const Color(0xFF0F5238);
     if (type == 'Barter') {
@@ -237,7 +287,6 @@ class FeedSosmedCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 👤 Header User Sosmed
           ListTile(
             leading: const CircleAvatar(
               backgroundColor: Color(0xFF2D6A4F),
@@ -268,14 +317,12 @@ class FeedSosmedCard extends StatelessWidget {
             ),
           ),
 
-          // 📸 2. POSTINGAN FOTO DINAMIS DARI DATABASE BACKEND
           if (imageUrl != null)
             Image.network(
               imageUrl!,
               height: 260,
               width: double.infinity,
               fit: BoxFit.cover,
-              // Loading Handle saat narik data gambar dari laptop
               loadingBuilder: (context, child, loadingProgress) {
                 if (loadingProgress == null) return child;
                 return Container(
@@ -286,7 +333,6 @@ class FeedSosmedCard extends StatelessWidget {
                   ),
                 );
               },
-              // Error Handle kalau gambar gak ketemu di folder static laptop
               errorBuilder: (context, error, stackTrace) {
                 return Container(
                   height: 200,
@@ -302,7 +348,7 @@ class FeedSosmedCard extends StatelessWidget {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Gambar belum di-sync ke folder static laptop',
+                          'Gambar tidak tersedia',
                           style: TextStyle(color: Colors.grey, fontSize: 11),
                         ),
                       ],
@@ -312,7 +358,6 @@ class FeedSosmedCard extends StatelessWidget {
               },
             )
           else
-            // Placeholder minimalis jika user posting tanpa melampirkan foto
             Container(
               height: 120,
               width: double.infinity,
@@ -326,7 +371,6 @@ class FeedSosmedCard extends StatelessWidget {
               ),
             ),
 
-          // ✍️ Detail Konten (Judul, Harga, Deskripsi)
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -359,19 +403,17 @@ class FeedSosmedCard extends StatelessWidget {
                     height: 1.4,
                     fontSize: 13,
                   ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
-
                 const SizedBox(height: 12),
                 const Divider(height: 1, thickness: 0.5),
                 const SizedBox(height: 4),
-
-                // 📊 3. TOMBOL SOSMED INTERAKTIF (LIKE, KOMEN, CHAT INTERAKSI)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
-                        // A. Tombol Like Sosmed
                         IconButton(
                           icon: const Icon(
                             Icons.favorite_border_rounded,
@@ -379,13 +421,9 @@ class FeedSosmedCard extends StatelessWidget {
                             size: 24,
                           ),
                           onPressed: () {
-                            Get.snackbar(
-                              "Like",
-                              "Postingan berhasil disukai, Beh!",
-                            );
+                            Get.snackbar("Like", "Postingan berhasil disukai!");
                           },
                         ),
-                        // B. Tombol Komen Nego Terbuka
                         IconButton(
                           icon: const Icon(
                             Icons.chat_bubble_outline_rounded,
@@ -393,16 +431,15 @@ class FeedSosmedCard extends StatelessWidget {
                             size: 23,
                           ),
                           onPressed: () {
-                            Get.snackbar(
-                              "Komentar",
-                              "Membuka lembar diskusi nego barang...",
+                            // ✅ PAKAI postId
+                            Get.toNamed(
+                              '/post-detail',
+                              arguments: {'post_id': postId},
                             );
                           },
                         ),
                       ],
                     ),
-
-                    // C. Tombol Hubungi Pemilik (Diteruskan Langsung ke Chat)
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2D6A4F),
@@ -415,8 +452,7 @@ class FeedSosmedCard extends StatelessWidget {
                           vertical: 8,
                         ),
                       ),
-                      onPressed:
-                          onChatPressed, // ◄ Pemicu aksi kirim pesan privat
+                      onPressed: onChatPressed,
                       icon: const Icon(
                         Icons.send_rounded,
                         size: 14,

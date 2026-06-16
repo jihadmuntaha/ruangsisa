@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:ruang_sisa/app/routes/app_pages.dart';
 import '../../../data/providers/auth_provider.dart'; // Jalur import provider
 
 class RegisterController extends GetxController {
@@ -67,7 +66,7 @@ class RegisterController extends GetxController {
         );
 
         // Lempar balik ke halaman login setelah sukses mendaftar
-        Get.offAllNamed(Routes.LOGIN);
+        Get.offAllNamed('/login');
       } else {
         print("Response error: ${response.statusCode} - ${response.body}");
         String errMsg =

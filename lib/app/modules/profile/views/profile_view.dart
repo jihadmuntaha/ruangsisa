@@ -161,9 +161,12 @@ class ProfileView extends StatelessWidget {
               ),
               itemBuilder: (context, index) {
                 final item = controller.userContributions[index];
+
+                // Kirim data judul, tipe/status, dan nama file gambarnya, Beh!
                 return _buildMiniGrid(
                   item['title'] ?? '',
-                  item['status'] ?? '',
+                  item['post_type'] ?? 'Donasi',
+                  item['images'], // ◄ AMBIL FIELD GAMBAR DARI DATABASE LU
                 );
               },
             );
@@ -173,30 +176,95 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  Widget _buildMiniGrid(String title, String status) {
+  Widget _buildMiniGrid(String title, String status, String? imageName) {
+    // Alamat IP Laptop lu buat jalur bypass gambar static FastAPI
+    const String ipLaptop =
+        "192.168.1.5"; // ◄ SAMAKAN DENGAN IP LAPTOP LU YANG AKTIF!
+
+    // Bangun URL gambar penuh
+    String? finalImageUrl;
+    if (imageName != null &&
+        imageName.isNotEmpty &&
+        imageName != 'foto_barang_default.png') {
+      finalImageUrl = "http://$ipLaptop:8000/static/uploads/$imageName";
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.image_outlined, color: Colors.grey, size: 40),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-          ),
-          Text(
-            status,
-            style: const TextStyle(
-              color: Color(0xFF2D6A4F),
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 📸 AREA FOTO POSTINGAN SAYA
+            Expanded(
+              child: finalImageUrl != null
+                  ? Image.network(
+                      finalImageUrl,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: Colors.grey[100],
+                        child: const Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      color: Colors.grey[100],
+                      child: const Center(
+                        child: Icon(
+                          Icons.image_outlined,
+                          color: Colors.grey,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+            ),
+
+            // 📝 KETERANGAN TEKS (JUDUL & BADGE STATUS)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    status,
+                    style: const TextStyle(
+                      color: Color(0xFF2D6A4F),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

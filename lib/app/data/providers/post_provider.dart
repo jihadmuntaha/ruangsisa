@@ -1,42 +1,187 @@
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'dart:io';
 
 class PostProvider extends GetConnect {
-  // 🌟 Ganti dengan IP IPv4 laptop lu hasil dari ipconfig CMD tadi!
-  final String baseUrlAddress = "http://192.168.1.5:8000/api";
+  final String baseUrlAddress = "http://172.24.243.45:8000/api";
 
   @override
   void onInit() {
     httpClient.baseUrl = baseUrlAddress;
-    httpClient.timeout = const Duration(seconds: 10);
+    httpClient.timeout = const Duration(seconds: 30);
 
-    // Satpam Interceptor: Otomatis nempel token kalau user udah login
-    httpClient.addRequestModifier<dynamic>((request) {
+    httpClient.addRequestModifier<dynamic>((request) async {
+      final box = GetStorage();
+      String? token = await box.read('access_token');
+
       request.headers['Accept'] = 'application/json';
+
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
       return request;
     });
+
     super.onInit();
   }
 
-  // 📦 Ambil Feed Postingan Beranda
+  // ✅ GET POSTS - Perbaiki tanpa mengubah body langsung
   Future<Response> getPosts({int? categoryId, String? search}) async {
-    Map<String, dynamic> query = {};
-    if (categoryId != null) query['category_id'] = categoryId.toString();
-    if (search != null) query['search'] = search;
-    return await get('/posts', query: query);
+    try {
+      Map<String, dynamic> query = {};
+      if (categoryId != null) query['category_id'] = categoryId.toString();
+      if (search != null) query['search'] = search;
+
+      final response = await get('/posts', query: query);
+      print("📡 [GET POSTS] Status: ${response.statusCode}");
+
+      // ✅ Jika response body adalah Map dengan key 'data', ambil datanya
+      if (response.statusCode == 200 && response.body != null) {
+        if (response.body is Map && response.body['data'] is List) {
+          // ✅ Buat response baru dengan body yang sudah diproses
+          return Response(
+            statusCode: response.statusCode,
+            statusText: response.statusText,
+            body: response.body['data'], // ← Ambil data-nya
+          );
+        }
+      }
+
+      return response;
+    } catch (e) {
+      print("❌ Error: $e");
+      return Response(statusCode: 500, statusText: e.toString());
+    }
   }
 
-  // 📤 Buat Postingan Barang Baru (Menu Add Post)
-  Future<Response> uploadPost(Map<String, dynamic> data) async {
-    return await post('/posts', data);
+  // 📦 GET CATEGORIES
+  Future<Response> getCategories() async {
+    try {
+      final response = await get('/categories');
+      print("📡 [GET CATEGORIES] Status: ${response.statusCode}");
+      return response;
+    } catch (e) {
+      print("❌ Error: $e");
+      return Response(statusCode: 500, statusText: e.toString());
+    }
   }
 
-  // 💬 Ambil List Komentar Nego per Postingan
+  // 📤 CREATE POST
+  Future<Response> createPost(
+    Map<String, String> fields,
+    String imagePath,
+  ) async {
+    try {
+      final box = GetStorage();
+      String? token = await box.read('access_token');
+
+      Map<String, String> headers = {'Accept': 'application/json'};
+
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      // Buat FormData
+      var formData = FormData({
+        'title': fields['title'] ?? '',
+        'description': fields['description'] ?? '',
+        'user_id': fields['user_id'] ?? '',
+        'post_type': fields['post_type'] ?? '',
+        'category_id': fields['category_id'] ?? '',
+        'image': MultipartFile(
+          File(imagePath).readAsBytesSync(),
+          filename: 'image.jpg',
+        ),
+      });
+
+      // Tambah field opsional
+      if (fields.containsKey('price')) {
+        formData.fields.add(MapEntry('price', fields['price']!));
+      }
+      if (fields.containsKey('barter_wishlist')) {
+        formData.fields.add(
+          MapEntry('barter_wishlist', fields['barter_wishlist']!),
+        );
+      }
+
+      final response = await post('/posts', formData, headers: headers);
+      print("📡 [CREATE POST] Status: ${response.statusCode}");
+
+      return response;
+    } catch (e) {
+      print("❌ Error: $e");
+      return Response(statusCode: 500, statusText: e.toString());
+    }
+  }
+
+  // 💬 GET COMMENTS
   Future<Response> getComments(int postId) async {
-    return await get('/posts/$postId/comments');
+    try {
+      final response = await get('/posts/$postId/comments');
+      print("💬 [GET COMMENTS] Status: ${response.statusCode}");
+      return response;
+    } catch (e) {
+      print("❌ Error: $e");
+      return Response(statusCode: 500, statusText: e.toString());
+    }
   }
 
-  // 📝 Kirim Komentar Nego Terbuka
+  // 📝 SEND COMMENT - Perbaiki format data
   Future<Response> sendComment(Map<String, dynamic> data) async {
-    return await post('/posts/comments', data);
+    try {
+      final box = GetStorage();
+      String? token = await box.read('access_token');
+
+      Map<String, String> headers = {
+        'Accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
+      // ✅ Buat FormData, bukan Map biasa
+      final formData = FormData({
+        'post_id': data['post_id'].toString(),
+        'user_id': data['user_id'].toString(),
+        'content': data['content'].toString(),
+      });
+
+      print("📝 [SEND COMMENT] Sending: ${formData.fields}");
+
+      final response = await post(
+        '/posts/comments',
+        formData,
+        headers: headers,
+      );
+      print("📝 [SEND COMMENT] Status: ${response.statusCode}");
+      print("📝 [SEND COMMENT] Body: ${response.body}");
+      return response;
+    } catch (e) {
+      print("❌ Error send comment: $e");
+      return Response(statusCode: 500, statusText: e.toString());
+    }
+  }
+
+  // 🗑️ DELETE COMMENT
+  Future<Response> deleteComment(int commentId, int userId) async {
+    try {
+      final box = GetStorage();
+      String? token = await box.read('access_token');
+
+      Map<String, String> headers = {
+        'Accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
+      final response = await delete(
+        '/posts/comments/$commentId',
+        headers: headers,
+        query: {'user_id': userId.toString()},
+      );
+      print("🗑️ [DELETE COMMENT] Status: ${response.statusCode}");
+      return response;
+    } catch (e) {
+      print("❌ Error: $e");
+      return Response(statusCode: 500, statusText: e.toString());
+    }
   }
 }

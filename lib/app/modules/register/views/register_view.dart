@@ -8,6 +8,12 @@ class RegisterView extends GetView<RegisterController> {
 
   @override
   Widget build(BuildContext context) {
+    if (Get.isRegistered<RegisterController>()) {
+      Get.delete<RegisterController>();
+    }
+    final RegisterController controller = Get.put(
+      RegisterController(),
+    ); // Pastikan controller terpasang saat view dibangun
     return Scaffold(
       // Background dasar putih agar form di bawah bersih
       backgroundColor: Colors.white,

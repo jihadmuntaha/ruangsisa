@@ -2,33 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../../data/providers/auth_provider.dart';
+import 'package:get_storage/get_storage.dart';
 
 class LoginController extends GetxController {
   final AuthProvider _authProvider = AuthProvider();
 
-  // 🟢 1. Deklarasikan variabel menggunakan 'late' agar tidak langsung dibuat statis di awal
-  late final TextEditingController emailController;
-  late final TextEditingController passwordController;
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
 
   var rememberMe = false.obs;
   var isLoading = false.obs;
 
-  // 🛠️ Inisialisasi GoogleSignIn instance
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId:
         "704950152906-bc94j0fasn2os09af328s6f26ahr44qi.apps.googleusercontent.com",
     scopes: ['email', 'profile'],
   );
 
-  // 🟢 2. Hidupkan controller teks BARU setiap kali halaman login ini dimuat oleh GetX
   @override
   void onInit() {
     super.onInit();
-    emailController = TextEditingController();
-    passwordController = TextEditingController();
   }
 
-  // --- Fungsi Login Lokal Kemarin (Tetap Dipertahankan) ---
+  // --- Fungsi Login Lokal ---
   void login() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       Get.snackbar(
@@ -39,37 +35,48 @@ class LoginController extends GetxController {
       );
       return;
     }
+
     try {
       isLoading.value = true;
       Map<String, dynamic> payload = {
         "email": emailController.text.trim(),
         "password": passwordController.text,
       };
+
       Response response = await _authProvider.loginUser(payload);
       isLoading.value = false;
 
-      if (response.statusCode == 200) {
-        String token = response.body['access_token'];
-        String userName = response.body['user']['name'];
-        print("🔑 JWT TOKEN RUANGSISA: $token");
-        Get.snackbar(
-          "Sukses",
-          "Selamat datang kembali, $userName!",
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
+      print("📡 Response Status: ${response.statusCode}");
+
+      if (response.statusCode == 200 && response.body is Map) {
+        String internalToken = response.body['access_token'];
+        var userData = response.body['user'];
+
+        // ✅ AMANKAN DATA KE STORAGE DENGAN AWAIT
+        final box = GetStorage();
+
+        // Tunggu setiap operasi write selesai
+        await box.write('access_token', internalToken);
+        await box.write('user_data', userData);
+        await box.write('user', userData);
+
+        // Beri jeda kecil agar semua write selesai sempurna
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        print("🔑 SESSION USER BERHASIL DI-LOCK: ${userData['name']}");
+
         Get.offAllNamed('/main-wrapper');
       } else {
-        String errorMsg = response.body?['detail'] ?? "Terjadi kesalahan";
         Get.snackbar(
           "Login Gagal",
-          errorMsg,
-          backgroundColor: Colors.orange,
+          "Server merespon ${response.statusCode}",
+          backgroundColor: Colors.red,
           colorText: Colors.white,
         );
       }
     } catch (e) {
       isLoading.value = false;
+      print("❌ Error login: $e");
       Get.snackbar(
         "Error",
         "Tidak dapat terhubung ke server backend!",
@@ -79,21 +86,24 @@ class LoginController extends GetxController {
     }
   }
 
-  // 🛠️ Fungsi Login Google
+  // --- Fungsi Login Google (SESUAIKAN) ---
   void loginWithGoogle() async {
     try {
       isLoading.value = true;
+      print("🔍 [STEP 1] Tombol Google Sign-In diketuk...");
 
-      if (await _googleSignIn.isSignedIn()) {
-        await _googleSignIn.signOut();
-      }
+      // Clear session lama
+      await _googleSignIn.signOut();
 
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {
         isLoading.value = false;
+        print("🚨 [STEP 2] User membatalkan pilihan akun.");
         return;
       }
+
+      print("🟢 [STEP 3] Akun dipilih: ${googleUser.email}");
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
@@ -101,24 +111,53 @@ class LoginController extends GetxController {
 
       if (idToken == null) {
         isLoading.value = false;
-        Get.snackbar(
-          "Google Auth Gagal",
-          "Gagal mendapatkan ID Token dari Google.",
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
+        print("🚨 [STEP 4] idToken NULL! Masalah SHA-1 mismatch.");
+        Get.snackbar("Auth Gagal", "Gagal mendapatkan ID Token dari Google.");
         return;
       }
+
+      print("🔑 [STEP 5] ID Token: ${idToken.substring(0, 10)}...");
 
       Map<String, dynamic> payload = {"id_token": idToken};
       Response response = await _authProvider.loginWithGoogleProvider(payload);
       isLoading.value = false;
 
-      if (response.statusCode == 200) {
-        String internalToken = response.body['access_token'];
-        String userName = response.body['user']['name'];
+      print("📡 [STEP 6] Response Status: ${response.statusCode}");
+      print("📡 [STEP 7] Response Body: ${response.body}");
 
-        print("🔑 JWT GOOGLE TOKEN RUANGSISA: $internalToken");
+      if (response.statusCode == 200 && response.body is Map) {
+        String internalToken = response.body['access_token'];
+        var userData = response.body['user'];
+        String userName = userData['name'] ?? 'User';
+
+        print("🔑 TOKEN: $internalToken");
+
+        // ✅ PERBAIKAN UTAMA: Simpan dengan await dan jeda
+        final box = GetStorage();
+
+        // Operasi 1: Simpan token
+        await box.write('access_token', internalToken);
+
+        // Operasi 2: Simpan data user (jika perlu jeda)
+        await Future.delayed(const Duration(milliseconds: 50));
+        await box.write('user_data', userData);
+
+        // Operasi 3: Simpan user
+        await Future.delayed(const Duration(milliseconds: 50));
+        await box.write('user', userData);
+
+        // Operasi 4: Verifikasi data tersimpan
+        await Future.delayed(const Duration(milliseconds: 100));
+        final savedUser = await box.read('user');
+
+        if (savedUser != null) {
+          print("✅ [VERIFIKASI] User berhasil disimpan: ${savedUser['name']}");
+          print("💾 [SESSION SAVED] Session Akun Google ($userName) Sukses!");
+        } else {
+          print("❌ [VERIFIKASI] Gagal menyimpan user!");
+        }
+
+        FocusManager.instance.primaryFocus?.unfocus();
 
         Get.snackbar(
           "Sukses via Google",
@@ -129,28 +168,20 @@ class LoginController extends GetxController {
 
         Get.offAllNamed('/main-wrapper');
       } else {
-        String errorMsg =
-            response.body?['detail'] ?? "Verifikasi backend gagal";
         Get.snackbar(
-          "Google Login Gagal",
-          errorMsg,
-          backgroundColor: Colors.orange,
+          "Login Gagal",
+          response.body?['detail'] ?? "Verifikasi gagal",
+          backgroundColor: Colors.red,
           colorText: Colors.white,
         );
       }
     } catch (error) {
       isLoading.value = false;
-      print("🚨 DETAIL ERROR GOOGLE SIGN IN: $error");
-      Get.snackbar(
-        "Error",
-        "Gagal melakukan Google Sign In: $error",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      print("🚨 [ERROR] Exception: $error");
+      Get.snackbar("Error Exception", error.toString());
     }
   }
 
-  // 🟢 3. Matikan secara aman pas halamannya ditutup/ditinggal permanen
   @override
   void onClose() {
     emailController.dispose();

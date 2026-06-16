@@ -10,6 +10,10 @@ class LoginView extends GetView<LoginController> {
     // Jalur lokal untuk melacak status penyamaran kata sandi
     final isPasswordHidden = true.obs;
 
+    if (Get.isRegistered<LoginController>()) {
+      Get.delete<LoginController>();
+    }
+    final LoginController controller = Get.put(LoginController());
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
