@@ -2,8 +2,6 @@ import 'package:get/get.dart';
 
 import '../modules/add_post/bindings/add_post_binding.dart';
 import '../modules/add_post/views/add_post_view.dart';
-import '../modules/chat/bindings/chat_binding.dart'; // ✅ TAMBAHKAN
-import '../modules/chat/views/chat_view.dart'; // ✅ TAMBAHKAN
 import '../modules/forgot_password/bindings/forgot_password_binding.dart';
 import '../modules/forgot_password/views/forgot_password_view.dart';
 import '../modules/home/bindings/home_binding.dart';
@@ -14,6 +12,8 @@ import '../modules/main_wrapper/bindings/main_wrapper_binding.dart';
 import '../modules/main_wrapper/views/main_wrapper_view.dart';
 import '../modules/message/bindings/message_binding.dart';
 import '../modules/message/views/message_view.dart';
+import '../modules/otpverification/bindings/otpverification_binding.dart';
+import '../modules/otpverification/views/otpverification_view.dart';
 import '../modules/post_detail/bindings/post_detail_binding.dart';
 import '../modules/post_detail/views/post_detail_view.dart';
 import '../modules/profile/bindings/profile_binding.dart';
@@ -22,6 +22,9 @@ import '../modules/register/bindings/register_binding.dart';
 import '../modules/register/views/register_view.dart';
 import '../modules/search/bindings/search_binding.dart';
 import '../modules/search/views/search_view.dart';
+
+import '../modules/chat/bindings/chat_binding.dart'; // ✅ TAMBAHKAN
+import '../modules/chat/views/chat_view.dart'; // ✅ TAMBAHKAN
 
 part 'app_routes.dart';
 
@@ -87,6 +90,11 @@ class AppPages {
       name: _Paths.CHAT,
       page: () => const ChatView(),
       binding: ChatBinding(),
+    ),
+    GetPage(
+      name: _Paths.OTPVERIFICATION,
+      page: () => const OtpVerificationView(),
+      binding: OtpverificationBinding(),
     ),
   ];
 }

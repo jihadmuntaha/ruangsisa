@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../../../data/providers/auth_provider.dart';
 import 'package:get_storage/get_storage.dart';
+import '../../../data/providers/auth_provider.dart';
 
 class LoginController extends GetxController {
   final AuthProvider _authProvider = AuthProvider();
 
+  // 🟢 FIXED: Langsung instansiasi, sinkron dengan StatelessWidget baru lu
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
   var rememberMe = false.obs;
   var isLoading = false.obs;
+  var _isProcessing = false;
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId:
@@ -22,61 +24,98 @@ class LoginController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _loadRememberMe();
   }
 
-  // --- Fungsi Login Lokal ---
-  void login() async {
-    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
-      Get.snackbar(
-        "Error",
-        "Email dan Password wajib diisi!",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return;
+  void _loadRememberMe() {
+    try {
+      final box = GetStorage();
+      final savedEmail = box.read('saved_email');
+      if (savedEmail != null && savedEmail.isNotEmpty) {
+        emailController.text = savedEmail;
+        rememberMe.value = true;
+      }
+    } catch (e) {
+      print("🚨 Error loading remember me: $e");
     }
+  }
+
+  void _saveRememberMe(String email) {
+    try {
+      final box = GetStorage();
+      if (rememberMe.value) {
+        box.write('saved_email', email);
+      } else {
+        box.remove('saved_email');
+      }
+    } catch (e) {
+      print("🚨 Error saving remember me: $e");
+    }
+  }
+
+  // 🚀 FUNGSI LOGIN EMAIL & PASSWORD MURNI
+  void login() async {
+    if (_isProcessing || isLoading.value) return;
+    if (!Get.isRegistered<LoginController>()) return;
 
     try {
+      final email = emailController.text.trim();
+      final password = passwordController.text;
+
+      if (email.isEmpty || password.isEmpty) {
+        Get.snackbar(
+          "Error",
+          "Email dan Password wajib diisi!",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      _isProcessing = true;
       isLoading.value = true;
-      Map<String, dynamic> payload = {
-        "email": emailController.text.trim(),
-        "password": passwordController.text,
-      };
 
+      Map<String, dynamic> payload = {"email": email, "password": password};
       Response response = await _authProvider.loginUser(payload);
-      isLoading.value = false;
 
-      print("📡 Response Status: ${response.statusCode}");
+      if (!Get.isRegistered<LoginController>()) return;
+
+      isLoading.value = false;
+      _isProcessing = false;
 
       if (response.statusCode == 200 && response.body is Map) {
         String internalToken = response.body['access_token'];
         var userData = response.body['user'];
 
-        // ✅ AMANKAN DATA KE STORAGE DENGAN AWAIT
+        // Kunci session ke storage HP
         final box = GetStorage();
-
-        // Tunggu setiap operasi write selesai
         await box.write('access_token', internalToken);
         await box.write('user_data', userData);
         await box.write('user', userData);
+        _saveRememberMe(email);
 
-        // Beri jeda kecil agar semua write selesai sempurna
-        await Future.delayed(const Duration(milliseconds: 100));
+        FocusManager.instance.primaryFocus?.unfocus();
 
-        print("🔑 SESSION USER BERHASIL DI-LOCK: ${userData['name']}");
-
-        Get.offAllNamed('/main-wrapper');
+        // 🟢 FIXED: Gunakan PostFrameCallback agar transisi rute tenang dan anti-layar merah!
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (Get.currentRoute != '/main-wrapper') {
+            print("🚀 [LOGIN] Frame siap! Meluncur aman ke main-wrapper.");
+            Get.offAllNamed('/main-wrapper');
+          }
+        });
       } else {
         Get.snackbar(
           "Login Gagal",
-          "Server merespon ${response.statusCode}",
+          response.body?['detail'] ?? "Server merespon ${response.statusCode}",
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
       }
     } catch (e) {
-      isLoading.value = false;
-      print("❌ Error login: $e");
+      if (Get.isRegistered<LoginController>()) {
+        isLoading.value = false;
+        _isProcessing = false;
+      }
       Get.snackbar(
         "Error",
         "Tidak dapat terhubung ke server backend!",
@@ -86,76 +125,57 @@ class LoginController extends GetxController {
     }
   }
 
-  // --- Fungsi Login Google (SESUAIKAN) ---
+  // 🌐 FUNGSI LOGIN VIA GOOGLE SAKTI
   void loginWithGoogle() async {
+    if (_isProcessing || isLoading.value) return;
+    if (!Get.isRegistered<LoginController>()) return;
+
     try {
+      _isProcessing = true;
       isLoading.value = true;
-      print("🔍 [STEP 1] Tombol Google Sign-In diketuk...");
 
-      // Clear session lama
       await _googleSignIn.signOut();
-
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (!Get.isRegistered<LoginController>()) return;
 
       if (googleUser == null) {
         isLoading.value = false;
-        print("🚨 [STEP 2] User membatalkan pilihan akun.");
+        _isProcessing = false;
         return;
       }
-
-      print("🟢 [STEP 3] Akun dipilih: ${googleUser.email}");
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
+      if (!Get.isRegistered<LoginController>()) return;
+
       if (idToken == null) {
         isLoading.value = false;
-        print("🚨 [STEP 4] idToken NULL! Masalah SHA-1 mismatch.");
+        _isProcessing = false;
         Get.snackbar("Auth Gagal", "Gagal mendapatkan ID Token dari Google.");
         return;
       }
 
-      print("🔑 [STEP 5] ID Token: ${idToken.substring(0, 10)}...");
-
       Map<String, dynamic> payload = {"id_token": idToken};
       Response response = await _authProvider.loginWithGoogleProvider(payload);
-      isLoading.value = false;
 
-      print("📡 [STEP 6] Response Status: ${response.statusCode}");
-      print("📡 [STEP 7] Response Body: ${response.body}");
+      if (!Get.isRegistered<LoginController>()) return;
+
+      isLoading.value = false;
+      _isProcessing = false;
 
       if (response.statusCode == 200 && response.body is Map) {
         String internalToken = response.body['access_token'];
         var userData = response.body['user'];
         String userName = userData['name'] ?? 'User';
 
-        print("🔑 TOKEN: $internalToken");
-
-        // ✅ PERBAIKAN UTAMA: Simpan dengan await dan jeda
+        // Kunci session Google ke memori HP
         final box = GetStorage();
-
-        // Operasi 1: Simpan token
         await box.write('access_token', internalToken);
-
-        // Operasi 2: Simpan data user (jika perlu jeda)
-        await Future.delayed(const Duration(milliseconds: 50));
         await box.write('user_data', userData);
-
-        // Operasi 3: Simpan user
-        await Future.delayed(const Duration(milliseconds: 50));
         await box.write('user', userData);
-
-        // Operasi 4: Verifikasi data tersimpan
-        await Future.delayed(const Duration(milliseconds: 100));
-        final savedUser = await box.read('user');
-
-        if (savedUser != null) {
-          print("✅ [VERIFIKASI] User berhasil disimpan: ${savedUser['name']}");
-          print("💾 [SESSION SAVED] Session Akun Google ($userName) Sukses!");
-        } else {
-          print("❌ [VERIFIKASI] Gagal menyimpan user!");
-        }
 
         FocusManager.instance.primaryFocus?.unfocus();
 
@@ -166,26 +186,42 @@ class LoginController extends GetxController {
           colorText: Colors.white,
         );
 
-        Get.offAllNamed('/main-wrapper');
+        // 🟢 FIXED: Biarkan rute berpindah secara natural tanpa interupsi delete manual yang bikin crash
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (Get.currentRoute != '/main-wrapper') {
+            print("🚀 [GOOGLE LOGIN] Frame aman! Loncat ke main-wrapper.");
+            Get.offAllNamed('/main-wrapper');
+          }
+        });
       } else {
+        String errorMsg =
+            response.body != null && response.body['detail'] != null
+            ? response.body['detail']
+            : "Verifikasi gagal";
         Get.snackbar(
           "Login Gagal",
-          response.body?['detail'] ?? "Verifikasi gagal",
+          errorMsg,
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
       }
     } catch (error) {
-      isLoading.value = false;
-      print("🚨 [ERROR] Exception: $error");
+      if (Get.isRegistered<LoginController>()) {
+        isLoading.value = false;
+        _isProcessing = false;
+      }
       Get.snackbar("Error Exception", error.toString());
     }
   }
 
   @override
   void onClose() {
+    print(
+      "🔴 LoginController onClose dipanggil secara bersih oleh sistem GetX",
+    );
     emailController.dispose();
     passwordController.dispose();
+    _isProcessing = false;
     super.onClose();
   }
 }

@@ -144,6 +144,7 @@ class AddPostView extends StatelessWidget {
                   items: const [
                     DropdownMenuItem(value: 'donation', child: Text('Donasi')),
                     DropdownMenuItem(value: 'sale', child: Text('Dijual')),
+                    DropdownMenuItem(value: 'barter', child: Text('Barter')),
                   ],
                   onChanged: (value) {
                     if (value != null) {

@@ -1,31 +1,38 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart'; // ◄ 1. FIXED: Ganti ke material.dart biar Color & Snackbar aman
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 class AuthProvider extends GetConnect {
+  // 🟢 2. FIXED: Satukan kiblat alamat IP laptop lu ke satu variabel global provider
   final String baseUrlAuth = "http://172.24.243.45:8000/auth";
 
   @override
   void onInit() {
     super.onInit();
 
-    // ✅ TAMBAHKAN INTERCEPTOR UNTUK SEMUA REQUEST
+    // Set default baseUrl bawaan GetConnect biar panggil rutenya gak usah ditulis panjang lagi
+    baseUrl = baseUrlAuth;
+
+    // ✅ INTERCEPTOR UNTUK SEMUA REQUEST (Suntik Token Otomatis)
     httpClient.addRequestModifier<dynamic>((request) async {
       final box = GetStorage();
-      final token = await box.read('access_token');
+      final token = box.read(
+        'access_token',
+      ); // Gak perlu pake 'await' untuk GetStorage biasa
 
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
-        print("🔑 [INTERCEPTOR] Token ditambahkan ke header");
+        print("🔑 [INTERCEPTOR] Token Bearer otomatis disuntikkan ke header");
       }
-
       return request;
     });
 
-    // ✅ TAMBAHKAN RESPONSE INTERCEPTOR UNTUK HANDLE 401
+    // ✅ RESPONSE INTERCEPTOR UNTUK HANDLE 401 (Auto Logout)
     httpClient.addResponseModifier((request, response) {
       if (response.statusCode == 401) {
-        print("⚠️ [INTERCEPTOR] Token expired! Logout otomatis");
+        print(
+          "⚠️ [INTERCEPTOR] Token expired atau tidak valid! Jalankan proteksi logout.",
+        );
         _handleLogout();
       }
       return response;
@@ -42,12 +49,13 @@ class AuthProvider extends GetConnect {
     Get.snackbar(
       "Sesi Habis",
       "Silakan login kembali",
-      backgroundColor: Color.fromARGB(255, 220, 53, 69),
-      colorText: Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: const Color.fromARGB(255, 220, 53, 69),
+      colorText: const Color.fromARGB(255, 255, 255, 255),
     );
   }
 
-  // Fungsi lainnya tetap sama...
+  // 📡 =============== ENDPOINT ROUTER PIPELINES ===============
+
   Future<Response> registerUser(Map<String, dynamic> data) {
     return post('$baseUrlAuth/register', data);
   }
@@ -58,8 +66,26 @@ class AuthProvider extends GetConnect {
 
   Future<Response> loginWithGoogleProvider(Map<String, dynamic> data) async {
     final response = await post('$baseUrlAuth/google', data);
-    print("STATUS: ${response.statusCode}");
-    print("BODY: ${response.body}");
+    print("📡 [GOOGLE PROVIDER] STATUS: ${response.statusCode}");
+    print("📡 [GOOGLE PROVIDER] BODY: ${response.body}");
     return response;
+  }
+
+  // 🟢 FIXED TOTAL: Buang semua variabel URL lengkap, CUKUP BUNTUTNYA DOANG!
+  Future<Response> verifyOtpProvider(Map<String, dynamic> payload) async {
+    print("📡 [PROVIDER OTP] Menembak rute murni ke: $baseUrl/verify-otp");
+    return await post(
+      '/verify-otp',
+      payload,
+    ); // ◄ HANYA TULIS INI, JANGAN DIUBAH!
+  }
+
+  // 🔥 FIXED TOTAL: Untuk kirim ulang juga sama, cukup buntutnya
+  Future<Response> resendOtpProvider(Map<String, dynamic> payload) async {
+    print("📡 [PROVIDER OTP] Minta kirim ulang murni ke: $baseUrl/resend-otp");
+    return await post(
+      '/resend-otp',
+      payload,
+    ); // ◄ HANYA TULIS INI, JANGAN DIUBAH!
   }
 }
