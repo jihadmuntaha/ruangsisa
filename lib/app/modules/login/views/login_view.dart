@@ -7,12 +7,10 @@ class LoginView extends GetView<LoginController> {
 
   @override
   Widget build(BuildContext context) {
-    // 🔥 PERBAIKAN KRUSIAL: Reset controller dengan aman
-    // Hapus controller lama jika ada dan tidak sedang loading
+    // Reset controller dengan aman
     if (Get.isRegistered<LoginController>()) {
       final existingController = Get.find<LoginController>();
       if (!existingController.isLoading.value) {
-        // Hapus controller lama
         Get.delete<LoginController>();
       }
     }
@@ -87,9 +85,7 @@ class LoginView extends GetView<LoginController> {
                     ),
                     const SizedBox(height: 32),
 
-                    // 🔥 PERBAIKAN: Gunakan Obx untuk rebuild saat controller berubah
                     Obx(() {
-                      // Jika controller sudah di-dispose, tampilkan loading
                       if (!Get.isRegistered<LoginController>()) {
                         return const Center(
                           child: CircularProgressIndicator(
@@ -102,7 +98,7 @@ class LoginView extends GetView<LoginController> {
                         children: [
                           _buildEmailField(controller.emailController),
                           const SizedBox(height: 16),
-                          _buildPasswordField(controller.passwordController),
+                          _buildPasswordField(), // ◄ Menggunakan fungsi bawaan di bawah
                           const SizedBox(height: 8),
 
                           // Remember Me & Lupa Password
@@ -215,6 +211,8 @@ class LoginView extends GetView<LoginController> {
                             ),
                           ),
                           const SizedBox(height: 16),
+
+                          // GOOGLE & FACE RECOGNITION OPTIONS
                           Row(
                             children: [
                               Expanded(
@@ -260,15 +258,21 @@ class LoginView extends GetView<LoginController> {
                                     ),
                                   ),
                                   onPressed: () {
-                                    // Facebook Sign In
+                                    Get.snackbar(
+                                      "Face Recognition",
+                                      "Membuka sensor pemindai wajah...",
+                                      backgroundColor: const Color(0xFF2D6A4F),
+                                      colorText: Colors.white,
+                                    );
                                   },
                                   icon: const Icon(
-                                    Icons.facebook,
-                                    color: Colors.blue,
-                                    size: 24,
+                                    Icons
+                                        .face_rounded, // ◄ FIXED: Pakai ikon universal yang pasti ada
+                                    color: Color(0xFF2D6A4F),
+                                    size: 20,
                                   ),
                                   label: const Text(
-                                    'Facebook',
+                                    'Face Scan',
                                     style: TextStyle(
                                       color: Colors.black,
                                       fontSize: 13,
@@ -284,7 +288,6 @@ class LoginView extends GetView<LoginController> {
                           Center(
                             child: GestureDetector(
                               onTap: () {
-                                // 🔥 PERBAIKAN: Hapus controller dengan aman
                                 if (Get.isRegistered<LoginController>()) {
                                   final ctrl = Get.find<LoginController>();
                                   if (!ctrl.isLoading.value) {
@@ -376,70 +379,65 @@ class LoginView extends GetView<LoginController> {
     );
   }
 
-  Widget _buildPasswordField(TextEditingController textController) {
-    return StatefulBuilder(
-      builder: (context, setState) {
-        bool isHidden = true;
+  // 🟢 SAFETY BYPASS: Buat toggle mata lokal dulu biar aman dari salah nama variabel controller lu, Beh!
+  Widget _buildPasswordField() {
+    final isHiddenLocal = true.obs; // Penyelamat error getter
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Kata Sandi',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: Color(0xFF404943),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Kata Sandi',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+            color: Color(0xFF404943),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Obx(
+          () => TextField(
+            controller: controller.passwordController,
+            obscureText: isHiddenLocal.value,
+            textInputAction: TextInputAction.done,
+            style: const TextStyle(fontSize: 14),
+            onSubmitted: (_) {
+              if (Get.isRegistered<LoginController>()) {
+                controller.login();
+              }
+            },
+            decoration: InputDecoration(
+              hintText: '••••••••',
+              hintStyle: TextStyle(color: Colors.grey[400]),
+              prefixIcon: Icon(
+                Icons.lock_outline_rounded,
+                color: Colors.grey[600],
+                size: 20,
               ),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: textController,
-              obscureText: isHidden,
-              textInputAction: TextInputAction.done,
-              style: const TextStyle(fontSize: 14),
-              onSubmitted: (_) {
-                if (Get.isRegistered<LoginController>()) {
-                  Get.find<LoginController>().login();
-                }
-              },
-              decoration: InputDecoration(
-                hintText: '••••••••',
-                hintStyle: TextStyle(color: Colors.grey[400]),
-                prefixIcon: Icon(
-                  Icons.lock_outline_rounded,
-                  color: Colors.grey[600],
+              suffixIcon: IconButton(
+                icon: Icon(
+                  isHiddenLocal.value
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: Colors.grey,
                   size: 20,
                 ),
-                // suffixIcon: IconButton(
-                //   icon: Icon(
-                //     isHidden
-                //         ? Icons.visibility_off_outlined
-                //         : Icons.visibility_outlined,
-                //     color: Colors.grey,
-                //     size: 20,
-                //   ),
-                //   onPressed: () {
-                //     setState(() {
-                //       isHidden = !isHidden;
-                //     });
-                //   },
-                // ),
-                filled: true,
-                fillColor: const Color(0xFFF3F4F6),
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
+                onPressed: () => isHiddenLocal.value = !isHiddenLocal.value,
+              ),
+              filled: true,
+              fillColor: const Color(0xFFF3F4F6),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 16,
+                horizontal: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
               ),
             ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 }

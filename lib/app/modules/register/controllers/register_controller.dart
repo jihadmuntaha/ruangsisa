@@ -5,7 +5,6 @@ import '../../../data/providers/auth_provider.dart';
 class RegisterController extends GetxController {
   final AuthProvider _authProvider = AuthProvider();
 
-  // 🟢 Langsung instansiasi, sinkron dengan arsitektur StatelessWidget baru
   final usernameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -14,7 +13,6 @@ class RegisterController extends GetxController {
   var ispasswordHidden = true.obs;
   var _isProcessing = false;
 
-  // 🔥 Tetap dipertahankan jika lu butuh tracking data sementara
   var tempUserData = <String, dynamic>{}.obs;
   var tempEmail = ''.obs;
 
@@ -61,6 +59,8 @@ class RegisterController extends GetxController {
         "password": password,
       };
 
+      print("BaseURL testing path: 172.24.243.45:8000");
+      print("BaseURL path match method: /auth/register");
       print("📡 [REGISTER] Menembak data pendaftaran ke laptop: $payload");
       final response = await _authProvider.registerUser(payload);
 
@@ -70,7 +70,6 @@ class RegisterController extends GetxController {
       _isProcessing = false;
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        // Simpan data cadangan sementara jika lu butuh
         tempUserData.value = {
           'name': name,
           'email': email,
@@ -78,27 +77,21 @@ class RegisterController extends GetxController {
         };
         tempEmail.value = email;
 
-        // Tutup soft keyboard biar gak ninggalin lag transisi layar
         FocusManager.instance.primaryFocus?.unfocus();
 
-        // 🛡️ FIXED: Gunakan PostFrameCallback agar pindah rute tenang, biarkan GetX mengurus siklus memori secara natural
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Get.snackbar(
-            "Langkah Terakhir, Beh!",
+            "Langkah Kedua, Beh! 📨",
             "Akun sukses dibuat! Silakan cek email lu buat ambil kode OTP rahasia.",
             backgroundColor: Colors.green,
             colorText: Colors.white,
             duration: const Duration(seconds: 4),
           );
 
-          // 🚀 MELUNCUR KE OTP BAWA ARGUMEN EMAIL & PURPOSE SINKRON DENGAN CONTROLLER OTP
+          // 🚀 ALUR AMAN: Amankan OTP dulu, nanti dari OTPController baru dilempar ke /face-scan
           Get.toNamed(
             '/otpverification',
-            arguments: {
-              'email': email,
-              'purpose':
-                  'register', // ◄ Ditambahkan ini agar OtpVerificationController lu gak kebingungan
-            },
+            arguments: {'email': email, 'purpose': 'register'},
           );
         });
       } else {

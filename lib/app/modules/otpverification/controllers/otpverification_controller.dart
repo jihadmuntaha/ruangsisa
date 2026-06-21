@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../.././data/providers/auth_provider.dart'; // ◄ Sudah pas mengarah ke AuthProvider baru lu
+import '../../.././data/providers/auth_provider.dart';
 
 class OtpVerificationController extends GetxController {
-  // Inisialisasi AuthProvider yang tadi sudah kita benahi
+  // Inisialisasi AuthProvider dengan aman
   final AuthProvider _authProvider = Get.isRegistered<AuthProvider>()
       ? Get.find<AuthProvider>()
       : Get.put(AuthProvider());
 
-  // 4 Controller untuk masing-masing kotak angka OTP
+  // 6 Controller untuk masing-masing kotak angka OTP
   final List<TextEditingController> otpControllers = List.generate(
     6,
     (_) => TextEditingController(),
@@ -34,9 +34,9 @@ class OtpVerificationController extends GetxController {
     }
   }
 
-  // 📡 FUNGSI UTAMA: Kirim 4 Angka OTP ke FastAPI Laptop Lu
+  // 📡 FUNGSI UTAMA: Kirim 6 Angka OTP ke FastAPI Laptop Lu
   void verifyOtpAction() async {
-    // Gabungkan 4 kotak teks terpisah menjadi 1 string utuh (misal: "8842")
+    // Gabungkan 6 kotak teks terpisah menjadi 1 string utuh
     String otpCode = otpControllers.map((c) => c.text.trim()).join();
 
     if (otpCode.length < 6) {
@@ -60,7 +60,7 @@ class OtpVerificationController extends GetxController {
 
       print("📡 [OTP] Menembak kode verifikasi ke backend laptop lu: $payload");
 
-      // 🚀 SEKARANG NYATA HIT KE BACKEND LAPTOP LU, BEH!
+      // 🚀 HIT KE BACKEND LAPTOP LU, BEH!
       Response response = await _authProvider.verifyOtpProvider(payload);
 
       print("📡 [OTP] Response Status Backend: ${response.statusCode}");
@@ -68,9 +68,9 @@ class OtpVerificationController extends GetxController {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         Get.snackbar(
-          "Verifikasi Sukses",
+          "Verifikasi Sukses 🎉",
           purpose.value == 'register'
-              ? "Akun lu sudah aktif! Silakan masuk, Beh."
+              ? "Akun lu sudah aktif! Langkah terakhir, mari amankan biometrik lu, Beh."
               : "Verifikasi berhasil! Silakan ubah password lu.",
           backgroundColor: Colors.green,
           colorText: Colors.white,
@@ -79,10 +79,17 @@ class OtpVerificationController extends GetxController {
         // Tutup soft keyboard biar gak macet pas pindah rute
         FocusManager.instance.primaryFocus?.unfocus();
 
-        // 🔄 LOGIKA PERPINDAHAN RUTIN
+        // 🔄 LOGIKA PERPINDAHAN RUTIN (PREMIUM UPGRADE FACE ID)
         if (purpose.value == 'register') {
-          // Kalau kelar register, sapu bersih stack halaman dan suruh dia login
-          Get.offAllNamed('/login');
+          // 🍏 DIRECT FLIGHT: Langsung diterbangkan ke halaman FaceScanView dengan mode register & bawa email!
+          Get.offNamed(
+            '/face-scan',
+            arguments: {
+              'mode': 'register',
+              'email': emailUser
+                  .value, // Oper email untuk bypass satpam token di backend
+            },
+          );
         } else {
           // Kalau dari lupa password, tendang dia ke halaman ResetPasswordView bawa email-nya
           Get.offAllNamed(

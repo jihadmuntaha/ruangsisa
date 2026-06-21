@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/profile_controller.dart'; // Sesuaikan jalur import controller kalian
+import '../controllers/profile_controller.dart';
 
-// 1. DIUBAH: Menggunakan StatelessWidget agar mandiri & anti-crash dari Bottom Nav
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // 🚨 MANANTRA PENYELAMAT: Memaksa GetX mendaftarkan ProfileController ke memori saat tab diklik
     final ProfileController controller = Get.put(ProfileController());
 
     return Scaffold(
@@ -47,7 +45,6 @@ class ProfileView extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // 🚨 Menggunakan Obx agar Nama User dinamis pasca-login
                 Obx(
                   () => Text(
                     controller.name.value,
@@ -60,7 +57,6 @@ class ProfileView extends StatelessWidget {
 
                 const SizedBox(height: 6),
 
-                // 🚨 Menggunakan Obx agar Bio User dinamis dari database
                 Obx(
                   () => Text(
                     controller.bio.value,
@@ -95,7 +91,6 @@ class ProfileView extends StatelessWidget {
                 ),
                 const Divider(height: 32),
 
-                // 🚨 Bagian Stat Counter dipantau Obx secara reaktif mengikuti jumlah upload
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
@@ -116,12 +111,11 @@ class ProfileView extends StatelessWidget {
 
           // Tab Grid Konten Saya
           const Text(
-            'Kontribusi Aktif',
+            'Kontribusi Active',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
 
-          // 🚨 REACTIVE GRID: Kosong di awal, otomatis memuntahkan data saat terisi kelak
           Obx(() {
             if (controller.userContributions.isEmpty) {
               return Container(
@@ -158,15 +152,14 @@ class ProfileView extends StatelessWidget {
                 crossAxisCount: 2,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
+                childAspectRatio: 1.0,
               ),
               itemBuilder: (context, index) {
                 final item = controller.userContributions[index];
-
-                // Kirim data judul, tipe/status, dan nama file gambarnya, Beh!
                 return _buildMiniGrid(
                   item['title'] ?? '',
                   item['post_type'] ?? 'Donasi',
-                  item['images'], // ◄ AMBIL FIELD GAMBAR DARI DATABASE LU
+                  item['images'],
                 );
               },
             );
@@ -177,11 +170,8 @@ class ProfileView extends StatelessWidget {
   }
 
   Widget _buildMiniGrid(String title, String status, String? imageName) {
-    // Alamat IP Laptop lu buat jalur bypass gambar static FastAPI
     const String ipLaptop =
-        "192.168.1.5"; // ◄ SAMAKAN DENGAN IP LAPTOP LU YANG AKTIF!
-
-    // Bangun URL gambar penuh
+        "172.24.243.45"; // ◄ SINKRONKAN DENGAN IP LAPTOP LU SAAT INI
     String? finalImageUrl;
     if (imageName != null &&
         imageName.isNotEmpty &&
@@ -206,7 +196,6 @@ class ProfileView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 📸 AREA FOTO POSTINGAN SAYA
             Expanded(
               child: finalImageUrl != null
                   ? Image.network(
@@ -234,8 +223,6 @@ class ProfileView extends StatelessWidget {
                       ),
                     ),
             ),
-
-            // 📝 KETERANGAN TEKS (JUDUL & BADGE STATUS)
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
@@ -298,7 +285,10 @@ class EditProfileView extends GetView<ProfileController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Profil', style: TextStyle(color: Colors.black)),
+        title: const Text(
+          'Edit Profil',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         leading: const BackButton(color: Colors.black),
         elevation: 0.5,
@@ -354,44 +344,147 @@ class EditProfileView extends GetView<ProfileController> {
   }
 }
 
-// --- SUB-VIEW TAMBAHAN: PENGATURAN ---
+// --- SUB-VIEW TAMBAHAN: PENGATURAN (SINKRONISASI LOG AKTIVITAS KAMDAT) ---
 class SettingsView extends GetView<ProfileController> {
   const SettingsView({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Pengaturan', style: TextStyle(color: Colors.black)),
+        title: const Text(
+          'Pengaturan',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         leading: const BackButton(color: Colors.black),
         elevation: 0.5,
       ),
       body: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 12),
         children: [
-          const ListTile(
-            leading: Icon(Icons.lock_outline),
-            title: Text('Privasi Akun'),
-            trailing: Icon(Icons.chevron_right),
-          ),
-          const ListTile(
-            leading: Icon(Icons.notifications_outlined),
-            title: Text('Notifikasi'),
-            trailing: Icon(Icons.chevron_right),
-          ),
-          const ListTile(
-            leading: Icon(Icons.help_outline),
-            title: Text('Bantuan'),
-            trailing: Icon(Icons.chevron_right),
-          ),
+          _buildSectionTitle('Keamanan & Autentikasi'),
+
           ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text(
-              'Keluar Akun',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            leading: const Icon(
+              Icons.face_unlock_rounded,
+              color: Color(0xFF2D6A4F),
             ),
-            onTap: () => controller.logoutAction(),
+            title: const Text(
+              'Aktifkan Face ID Login',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: const Text(
+              'Daftarkan wajah lu untuk login instan biometrik, Beh!',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Get.toNamed(
+                '/face-scan',
+                arguments: {'mode': 'register', 'email': ''},
+              );
+            },
+          ),
+          const Divider(height: 1),
+
+          ListTile(
+            leading: const Icon(
+              Icons.lock_outline_rounded,
+              color: Colors.blueGrey,
+            ),
+            title: const Text('Privasi Akun'),
+            subtitle: const Text(
+              'Kelola visibilitas postingan tekstil & data pribadi',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {},
+          ),
+          const Divider(height: 1),
+
+          // 🛡️📝 MENU LOG AKTIVITAS (SUDAH DISINKRONKAN RUTENYA, BEH!)
+          ListTile(
+            leading: const Icon(
+              Icons.history_toggle_off_rounded,
+              color: Color(0xFF1B4332),
+            ),
+            title: const Text(
+              'Log Aktivitas',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: const Text(
+              'Audit trail: Riwayat login, perubahan data tekstil, & aksi lu, Beh!',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              // 🟢 KUNCI SINKRON: Mengarah tepat ke rute page khusus yang kita bikin kemarin
+              Get.toNamed('/activity-log');
+            },
+          ),
+
+          const SizedBox(height: 16),
+          _buildSectionTitle('Aplikasi & Notifikasi'),
+
+          ListTile(
+            leading: const Icon(
+              Icons.notifications_outlined,
+              color: Colors.orange,
+            ),
+            title: const Text('Notifikasi'),
+            subtitle: const Text(
+              'Atur pesan masuk, pengingat OTP, & info donasi',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {},
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.help_outline_rounded, color: Colors.blue),
+            title: const Text('Bantuan & Hubungi Kami'),
+            subtitle: const Text(
+              'Pusat edukasi sirkular ekonomi & CS RuangSisa',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {},
+          ),
+
+          const SizedBox(height: 32),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Colors.red, width: 1),
+              ),
+              tileColor: Colors.red.withOpacity(0.05),
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text(
+                'Keluar Akun Kontributor',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onTap: () => controller.logoutAction(),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: Color(0xFF2D6A4F),
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }

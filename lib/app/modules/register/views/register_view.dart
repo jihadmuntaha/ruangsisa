@@ -7,17 +7,13 @@ class RegisterView extends GetView<RegisterController> {
 
   @override
   Widget build(BuildContext context) {
-    // 🔥 PERBAIKAN: Hapus controller lama jika ada, lalu buat baru
-    // TAPI jangan dihapus jika sedang dalam proses registrasi
     if (Get.isRegistered<RegisterController>()) {
       final controller = Get.find<RegisterController>();
       if (!controller.isLoading.value) {
-        // Hanya hapus jika tidak sedang loading
         Get.delete<RegisterController>();
       }
     }
 
-    // Buat controller baru
     if (!Get.isRegistered<RegisterController>()) {
       Get.put(RegisterController());
     }
@@ -28,7 +24,7 @@ class RegisterView extends GetView<RegisterController> {
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         child: Column(
           children: [
-            // HEADER - SAMA PERSIS
+            // HEADER - RuangSisa Theme
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
@@ -66,7 +62,7 @@ class RegisterView extends GetView<RegisterController> {
               ),
             ),
 
-            // FORM - SAMA PERSIS
+            // FORM UTAMA REGISTRASI LOKAL
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
               child: Column(
@@ -86,9 +82,7 @@ class RegisterView extends GetView<RegisterController> {
                   ),
                   const SizedBox(height: 32),
 
-                  // 🔥 PERBAIKAN: Gunakan Obx agar rebuild saat controller berubah
                   Obx(() {
-                    // Jika controller sudah di-dispose, tampilkan placeholder
                     if (!Get.isRegistered<RegisterController>()) {
                       return const Center(
                         child: CircularProgressIndicator(
@@ -117,7 +111,9 @@ class RegisterView extends GetView<RegisterController> {
                           'Kata Sandi',
                           Icons.lock_outline_rounded,
                           '••••••••',
-                          isSecure: true,
+                          isSecure: !controller
+                              .ispasswordHidden
+                              .value, // 🔥 FIXED: Sinkronisasi toggle mata
                           textController: controller.passwordController,
                         ),
                         const SizedBox(height: 32),
@@ -171,74 +167,13 @@ class RegisterView extends GetView<RegisterController> {
                       ],
                     );
                   }),
-                  const SizedBox(height: 24),
-
-                  const Center(
-                    child: Text(
-                      'atau daftar dengan',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey[300]!),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          onPressed: () {},
-                          icon: const Icon(
-                            Icons.g_mobiledata_rounded,
-                            color: Colors.red,
-                            size: 28,
-                          ),
-                          label: const Text(
-                            'Google',
-                            style: TextStyle(color: Colors.black, fontSize: 13),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey[300]!),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          onPressed: () {},
-                          icon: const Icon(
-                            Icons.facebook,
-                            color: Colors.blue,
-                            size: 24,
-                          ),
-                          label: const Text(
-                            'Facebook',
-                            style: TextStyle(color: Colors.black, fontSize: 13),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 40),
-
-                  // Link ke Login
-                  // Di bagian link ke Login di RegisterView
+                  const SizedBox(
+                    height: 32,
+                  ), // Spacing penyeimbang setelah tombol sosial media dibuang
+                  // Link Kembali ke Halaman Login
                   Center(
                     child: GestureDetector(
                       onTap: () {
-                        // 🔥 Hapus controller dengan aman
                         if (Get.isRegistered<RegisterController>()) {
                           final ctrl = Get.find<RegisterController>();
                           if (!ctrl.isLoading.value) {
@@ -278,7 +213,6 @@ class RegisterView extends GetView<RegisterController> {
     );
   }
 
-  // 🔥 PERBAIKAN: Widget form tanpa StatefulBuilder, gunakan controller langsung
   Widget _buildFormInput(
     String label,
     IconData icon,
@@ -306,9 +240,11 @@ class RegisterView extends GetView<RegisterController> {
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey[400]),
             prefixIcon: Icon(icon, color: Colors.grey[600], size: 20),
-            suffixIcon: isSecure
+            suffixIcon:
+                isSecure ||
+                    label ==
+                        'Kata Sandi' // 🔥 FIXED: Suffix icon eye hanya tampil di input Sandi
                 ? Obx(() {
-                    // Cek controller masih ada
                     if (!Get.isRegistered<RegisterController>()) {
                       return const SizedBox.shrink();
                     }

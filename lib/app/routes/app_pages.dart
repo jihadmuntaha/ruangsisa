@@ -1,5 +1,9 @@
 import 'package:get/get.dart';
 
+import '../modules/FaceScan/bindings/face_scan_binding.dart';
+import '../modules/FaceScan/views/face_scan_view.dart';
+import '../modules/activity_log/bindings/activity_log_binding.dart';
+import '../modules/activity_log/views/activity_log_view.dart';
 import '../modules/add_post/bindings/add_post_binding.dart';
 import '../modules/add_post/views/add_post_view.dart';
 import '../modules/forgot_password/bindings/forgot_password_binding.dart';
@@ -95,6 +99,16 @@ class AppPages {
       name: _Paths.OTPVERIFICATION,
       page: () => const OtpVerificationView(),
       binding: OtpverificationBinding(),
+    ),
+    GetPage(
+      name: _Paths.FACE_SCAN,
+      page: () => const FaceScanView(),
+      binding: FaceScanBinding(),
+    ),
+    GetPage(
+      name: _Paths.ACTIVITY_LOG,
+      page: () => const ActivityLogView(),
+      binding: ActivityLogBinding(),
     ),
   ];
 }

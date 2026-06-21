@@ -16,6 +16,8 @@ abstract class Routes {
   static const CHAT = _Paths.CHAT;
   static const VERIFY_OTP = _Paths.VERIFY_OTP;
   static const OTPVERIFICATION = _Paths.OTPVERIFICATION;
+  static const FACE_SCAN = _Paths.FACE_SCAN;
+  static const ACTIVITY_LOG = _Paths.ACTIVITY_LOG;
 }
 
 abstract class _Paths {
@@ -33,4 +35,6 @@ abstract class _Paths {
   static const CHAT = '/chat';
   static const VERIFY_OTP = '/verify-otp';
   static const OTPVERIFICATION = '/otpverification';
+  static const FACE_SCAN = '/face-scan';
+  static const ACTIVITY_LOG = '/activity-log';
 }
