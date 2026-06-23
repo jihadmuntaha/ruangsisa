@@ -83,13 +83,22 @@ class LoginController extends GetxController {
       isLoading.value = false;
       _isProcessing = false;
 
+      // Di login() function
       if (response.statusCode == 200 && response.body is Map) {
         String internalToken = response.body['access_token'];
         var userData = response.body['user'];
 
-        // Kunci session ke storage HP
         final box = GetStorage();
+
+        // ✅ Simpan token
         await box.write('access_token', internalToken);
+        await box.write('token', internalToken);
+
+        // ✅ Simpan refresh token (jika ada)
+        if (response.body['refresh_token'] != null) {
+          await box.write('refresh_token', response.body['refresh_token']);
+        }
+
         await box.write('user_data', userData);
         await box.write('user', userData);
         _saveRememberMe(email);

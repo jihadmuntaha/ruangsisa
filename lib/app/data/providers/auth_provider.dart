@@ -28,12 +28,22 @@ class AuthProvider extends GetConnect {
     });
 
     // ✅ RESPONSE INTERCEPTOR UNTUK HANDLE 401 (Auto Logout)
+    // Di AuthProvider - tambahkan di response interceptor
     httpClient.addResponseModifier((request, response) {
       if (response.statusCode == 401) {
-        print(
-          "⚠️ [INTERCEPTOR] Token expired atau tidak valid! Jalankan proteksi logout.",
-        );
-        _handleLogout();
+        print("⚠️ [INTERCEPTOR] Token expired atau tidak valid!");
+
+        // Coba refresh token atau logout
+        final box = GetStorage();
+        final refreshToken = box.read('refresh_token');
+
+        if (refreshToken != null) {
+          // Coba refresh token (jika ada endpoint refresh)
+          // _refreshToken(refreshToken);
+        } else {
+          // Logout otomatis
+          _handleLogout();
+        }
       }
       return response;
     });

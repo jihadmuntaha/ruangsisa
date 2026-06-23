@@ -168,17 +168,12 @@ class PostDetailView extends StatelessWidget {
                       post['description'] ?? '',
                       style: const TextStyle(fontSize: 16, height: 1.6),
                     ),
-                    // Di bagian bawah description
+
+                    const SizedBox(height: 12),
+
+                    // 🟢 TOMBOL UTAMA CHAT PENJUAL (SINKRON KE CONTROLLER)
                     ElevatedButton.icon(
-                      onPressed: () {
-                        Get.toNamed(
-                          '/chat',
-                          arguments: {
-                            'user_id': post['user_id'],
-                            'name': post['author']?['name'] ?? 'User',
-                          },
-                        );
-                      },
+                      onPressed: controller.goToChat,
                       icon: const Icon(Icons.chat, color: Colors.white),
                       label: const Text('Chat Penjual'),
                       style: ElevatedButton.styleFrom(
@@ -231,7 +226,7 @@ class PostDetailView extends StatelessWidget {
                         itemCount: controller.comments.length,
                         itemBuilder: (context, index) {
                           final comment = controller.comments[index];
-                          final isOwnComment =
+                          final bool isOwnComment =
                               comment['user_id'] == controller.currentUserId;
 
                           return Card(
@@ -278,7 +273,6 @@ class PostDetailView extends StatelessWidget {
             ),
 
             // 📝 Comment Input
-            // Comment Input - pastikan pakai Form
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(

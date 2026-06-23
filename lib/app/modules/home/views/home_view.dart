@@ -9,6 +9,7 @@ class HomeView extends StatelessWidget {
   Widget build(BuildContext context) {
     final HomeController controller = Get.put(HomeController());
 
+    // 🟢 SINKRON: Base URL murni mengarah ke IP laptop aktif lu saat ini
     final String baseUrl = "http://172.24.243.45:8000";
 
     final List<Map<String, dynamic>> categories = [
@@ -194,15 +195,14 @@ class HomeView extends StatelessWidget {
                       formatPrice = 'Rp ${post['price']}';
                     }
 
+                    // 🟢 PERBAIKAN: Rakit URL Gambar secara presisi & anti-double-slash
                     String? finalImageUrl;
-                    if (post['images'] != null && post['images'].isNotEmpty) {
-                      String imagePath = post['images'];
-                      if (imagePath.startsWith('/uploads/')) {
-                        finalImageUrl =
-                            "$baseUrl${imagePath.replaceFirst('/uploads', '/uploads')}";
-                      } else {
-                        finalImageUrl = "$baseUrl/uploads/$imagePath";
-                      }
+                    if (post['images'] != null &&
+                        post['images'].toString().isNotEmpty) {
+                      String imagePath = post['images'].toString();
+                      // Ambil murni nama filenya saja, cegah penumpukan kata '/uploads/'
+                      String cleanFileName = imagePath.split('/').last;
+                      finalImageUrl = "$baseUrl/uploads/$cleanFileName";
                     }
 
                     return GestureDetector(
@@ -213,7 +213,7 @@ class HomeView extends StatelessWidget {
                         );
                       },
                       child: FeedSosmedCard(
-                        postId: post['id'], // ✅ KIRIM postId
+                        postId: post['id'],
                         name: ownerName,
                         type: post['post_type'] ?? 'Donasi',
                         title: post['title'] ?? 'Tanpa Judul',
@@ -244,7 +244,6 @@ class HomeView extends StatelessWidget {
   }
 }
 
-// Feed Card Component - Sudah Diperbaiki
 class FeedSosmedCard extends StatelessWidget {
   final String name;
   final String type;
@@ -254,7 +253,7 @@ class FeedSosmedCard extends StatelessWidget {
   final String? price;
   final String? imageUrl;
   final VoidCallback onChatPressed;
-  final int postId; // ✅ TAMBAHKAN
+  final int postId;
 
   const FeedSosmedCard({
     Key? key,
@@ -266,7 +265,7 @@ class FeedSosmedCard extends StatelessWidget {
     required this.onChatPressed,
     this.price,
     this.imageUrl,
-    required this.postId, // ✅ TAMBAHKAN
+    required this.postId,
   }) : super(key: key);
 
   @override
@@ -431,7 +430,6 @@ class FeedSosmedCard extends StatelessWidget {
                             size: 23,
                           ),
                           onPressed: () {
-                            // ✅ PAKAI postId
                             Get.toNamed(
                               '/post-detail',
                               arguments: {'post_id': postId},

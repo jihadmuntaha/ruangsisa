@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../../data/providers/post_provider.dart';
 import '../../home/controllers/home_controller.dart';
+// 🟢 IMPOR BARU: Panggil controller wrapper utama dan controller chat lu
+import '../../main_wrapper/controllers/main_wrapper_controller.dart';
+import '../../chat/controllers/chat_controller.dart';
 
 class PostDetailController extends GetxController {
   final PostProvider _postProvider = Get.put(PostProvider());
@@ -174,11 +177,43 @@ class PostDetailController extends GetxController {
     }
   }
 
+  // 🟢 PERBAIKAN TOTAL: Logika pemindahan Tab Navigasi Bawah + Auto Initiate Room Chat
   void goToChat() {
-    final ownerId = post.value?['user_id'];
-    final ownerName = post.value?['author']?['name'] ?? "Penjual";
+    if (post.value == null) return;
 
-    Get.toNamed('/chat', arguments: {'user_id': ownerId, 'name': ownerName});
+    final currentPost = post.value!;
+    final int ownerId = currentPost['user_id'] ?? 0;
+    final String ownerName = currentPost['author']?['name'] ?? "Penjual Limbah";
+
+    if (ownerId == 0) {
+      Get.snackbar("Info", "Data kontributor pemilik barang tidak valid, Beh!");
+      return;
+    }
+
+    if (ownerId == currentUserId) {
+      Get.snackbar(
+        "Eits!",
+        "Ini barang lu sendiri, Beh! Gak bisa chat diri sendiri.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.amber,
+        colorText: Colors.black,
+      );
+      return;
+    }
+
+    // 1. Geser Tab Menu Utama Aplikasi secara halus ke Index 3 (Menu Pesan)
+    final mainWrapperController = Get.find<MainWrapperController>();
+    mainWrapperController.changeTabIndex(3);
+
+    // 2. Akses pos memori ChatController, suntik data lawannya, lalu paksa buka pipa API room-nya
+    final chatController = Get.find<ChatController>();
+    chatController.setChatPartner(ownerId, ownerName);
+    chatController.chatRoomId.value =
+        0; // Reset ke 0 agar memicu trigger pembuatan room baru di backend
+    chatController.initiateChatRoom();
+
+    // 3. Tutup halaman detail saat ini agar ketika user klik back di chat, dia nangkring di Chat List
+    Get.back();
   }
 
   @override

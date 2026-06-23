@@ -14,8 +14,6 @@ import '../modules/login/bindings/login_binding.dart';
 import '../modules/login/views/login_view.dart';
 import '../modules/main_wrapper/bindings/main_wrapper_binding.dart';
 import '../modules/main_wrapper/views/main_wrapper_view.dart';
-import '../modules/message/bindings/message_binding.dart';
-import '../modules/message/views/message_view.dart';
 import '../modules/otpverification/bindings/otpverification_binding.dart';
 import '../modules/otpverification/views/otpverification_view.dart';
 import '../modules/post_detail/bindings/post_detail_binding.dart';
@@ -57,11 +55,6 @@ class AppPages {
       name: _Paths.ADD_POST,
       page: () => const AddPostView(),
       binding: AddPostBinding(),
-    ),
-    GetPage(
-      name: _Paths.MESSAGE,
-      page: () => const MessageView(),
-      binding: MessageBinding(),
     ),
     GetPage(
       name: _Paths.PROFILE,

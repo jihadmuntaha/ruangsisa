@@ -40,7 +40,7 @@ class ProfileView extends StatelessWidget {
               children: [
                 const CircleAvatar(
                   radius: 40,
-                  backgroundColor: Color(0xFF2D6A4F),
+                  backgroundColor: const Color(0xFF2D6A4F),
                   child: Icon(Icons.person, size: 40, color: Colors.white),
                 ),
                 const SizedBox(height: 12),
@@ -159,7 +159,7 @@ class ProfileView extends StatelessWidget {
                 return _buildMiniGrid(
                   item['title'] ?? '',
                   item['post_type'] ?? 'Donasi',
-                  item['images'],
+                  item['images'], // Kolom gambar dari database backend
                 );
               },
             );
@@ -169,14 +169,19 @@ class ProfileView extends StatelessWidget {
     );
   }
 
+  // 🟢 PERBAIKAN TOTAL: Fungsi render gambar anti-404 dan anti-double-slash
   Widget _buildMiniGrid(String title, String status, String? imageName) {
-    const String ipLaptop =
-        "172.24.243.45"; // ◄ SINKRONKAN DENGAN IP LAPTOP LU SAAT INI
+    const String ipLaptop = "172.24.243.45"; // ◄ IP laptop lu saat ini
     String? finalImageUrl;
+
     if (imageName != null &&
         imageName.isNotEmpty &&
         imageName != 'foto_barang_default.png') {
-      finalImageUrl = "http://$ipLaptop:8000/static/uploads/$imageName";
+      // Mengantisipasi jika database menyimpan string berupa path penuh (cth: /uploads/file.jpg)
+      String cleanFileName = imageName.split('/').last;
+
+      // Menggunakan route mount murni FastAPI kita tanpa subfolder /static/
+      finalImageUrl = "http://$ipLaptop:8000/uploads/$cleanFileName";
     }
 
     return Container(
@@ -344,7 +349,7 @@ class EditProfileView extends GetView<ProfileController> {
   }
 }
 
-// --- SUB-VIEW TAMBAHAN: PENGATURAN (SINKRONISASI LOG AKTIVITAS KAMDAT) ---
+// --- SUB-VIEW TAMBAHAN: PENGATURAN ---
 class SettingsView extends GetView<ProfileController> {
   const SettingsView({super.key});
 
@@ -402,7 +407,6 @@ class SettingsView extends GetView<ProfileController> {
           ),
           const Divider(height: 1),
 
-          // 🛡️📝 MENU LOG AKTIVITAS (SUDAH DISINKRONKAN RUTENYA, BEH!)
           ListTile(
             leading: const Icon(
               Icons.history_toggle_off_rounded,
@@ -417,7 +421,6 @@ class SettingsView extends GetView<ProfileController> {
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // 🟢 KUNCI SINKRON: Mengarah tepat ke rute page khusus yang kita bikin kemarin
               Get.toNamed('/activity-log');
             },
           ),

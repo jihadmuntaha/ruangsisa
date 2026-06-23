@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:ruang_sisa/app/modules/chat/views/chat_view.dart';
 import '../controllers/main_wrapper_controller.dart';
 import '../../home/views/home_view.dart';
 import '../../search/views/search_view.dart';
 import '../../add_post/views/add_post_view.dart';
-import '../../message/views/message_view.dart';
 import '../../profile/views/profile_view.dart';
 
 class MainWrapperView extends GetView<MainWrapperController> {
@@ -17,7 +17,7 @@ class MainWrapperView extends GetView<MainWrapperController> {
       const HomeView(),
       const SearchView(),
       const AddPostView(),
-      const MessageView(),
+      const ChatView(),
       const ProfileView(),
     ];
 
