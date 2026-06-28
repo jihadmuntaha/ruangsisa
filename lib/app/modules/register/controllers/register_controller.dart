@@ -59,7 +59,7 @@ class RegisterController extends GetxController {
         "password": password,
       };
 
-      print("BaseURL testing path: 172.24.243.45:8000");
+      print("BaseURL testing path: 10.20.166.45:8000");
       print("BaseURL path match method: /auth/register");
       print("📡 [REGISTER] Menembak data pendaftaran ke laptop: $payload");
       final response = await _authProvider.registerUser(payload);

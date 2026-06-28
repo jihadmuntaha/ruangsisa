@@ -328,7 +328,7 @@ class AddPostView extends StatelessWidget {
   // Helper function untuk icon berdasarkan kategori
   IconData _getIconForCategory(String categoryName) {
     switch (categoryName) {
-      case 'Pakaian':
+      case 'Fashion':
         return Icons.checkroom;
       case 'Elektronik':
         return Icons.phone_android;

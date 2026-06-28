@@ -3,7 +3,7 @@ import 'package:get_storage/get_storage.dart';
 import 'dart:io';
 
 class PostProvider extends GetConnect {
-  final String baseUrlAddress = "http://172.24.243.45:8000/api";
+  final String baseUrlAddress = "http://10.20.166.45:8000/api";
 
   @override
   void onInit() {

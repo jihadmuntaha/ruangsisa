@@ -10,11 +10,11 @@ class HomeView extends StatelessWidget {
     final HomeController controller = Get.put(HomeController());
 
     // 🟢 SINKRON: Base URL murni mengarah ke IP laptop aktif lu saat ini
-    final String baseUrl = "http://172.24.243.45:8000";
+    final String baseUrl = "http://10.20.166.45:8000";
 
     final List<Map<String, dynamic>> categories = [
       {'id': null, 'name': 'Semua', 'icon': Icons.grid_view},
-      {'id': 1, 'name': 'Pakaian', 'icon': Icons.checkroom},
+      {'id': 1, 'name': 'Fashion', 'icon': Icons.checkroom},
       {'id': 2, 'name': 'Elektronik', 'icon': Icons.devices_other},
       {'id': 3, 'name': 'Furnitur', 'icon': Icons.chair},
       {'id': 4, 'name': 'Buku & Hobi', 'icon': Icons.menu_book},

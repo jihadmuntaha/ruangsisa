@@ -7,7 +7,6 @@ import '../../../data/providers/auth_provider.dart';
 class LoginController extends GetxController {
   final AuthProvider _authProvider = AuthProvider();
 
-  // 🟢 FIXED: Langsung instansiasi, sinkron dengan StatelessWidget baru lu
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
@@ -83,32 +82,37 @@ class LoginController extends GetxController {
       isLoading.value = false;
       _isProcessing = false;
 
-      // Di login() function
       if (response.statusCode == 200 && response.body is Map) {
-        String internalToken = response.body['access_token'];
+        String internalToken =
+            response.body['access_token'] ??
+            response.body['token']; // Backup key
         var userData = response.body['user'];
 
+        // 🟢 FIX MUTLAK SORE INI: Inisialisasi murni tanpa instance terputus
         final box = GetStorage();
 
-        // ✅ Simpan token
-        await box.write('access_token', internalToken);
-        await box.write('token', internalToken);
+        // Bersihkan sisa dump cache lama biar gak tabrakan
+        await box.remove('token');
+        await box.remove('access_token');
+        await box.remove('user');
+        await box.remove('user_data');
 
-        // ✅ Simpan refresh token (jika ada)
-        if (response.body['refresh_token'] != null) {
-          await box.write('refresh_token', response.body['refresh_token']);
-        }
-
+        // Tulis ulang secara paksa, pastikan nilainya string beneran murni
+        await box.write('access_token', internalToken.toString());
+        await box.write('token', internalToken.toString());
         await box.write('user_data', userData);
         await box.write('user', userData);
-        _saveRememberMe(email);
 
+        // Pli tambah debug print lokal biar kelihatan di log HP Realme lu pas klik login
+        print(
+          "📁 [DEBUG LOGIN MANUAL] Berhasil mengunci token: ${box.read('token')}",
+        );
+
+        _saveRememberMe(email);
         FocusManager.instance.primaryFocus?.unfocus();
 
-        // 🟢 FIXED: Gunakan PostFrameCallback agar transisi rute tenang dan anti-layar merah!
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (Get.currentRoute != '/main-wrapper') {
-            print("🚀 [LOGIN] Frame siap! Meluncur aman ke main-wrapper.");
             Get.offAllNamed('/main-wrapper');
           }
         });
@@ -176,18 +180,30 @@ class LoginController extends GetxController {
       _isProcessing = false;
 
       if (response.statusCode == 200 && response.body is Map) {
-        String internalToken = response.body['access_token'];
+        String internalToken =
+            response.body['access_token'] ?? response.body['token'];
         var userData = response.body['user'];
         String userName = userData['name'] ?? 'User';
 
-        // Kunci session Google ke memori HP
         final box = GetStorage();
-        await box.write('access_token', internalToken);
+
+        // Bersihkan dump cache sisa login lama
+        await box.remove('token');
+        await box.remove('access_token');
+        await box.remove('user');
+        await box.remove('user_data');
+
+        // Tulis ulang secara seragam dan paksa murni
+        await box.write('access_token', internalToken.toString());
+        await box.write('token', internalToken.toString());
         await box.write('user_data', userData);
         await box.write('user', userData);
 
-        FocusManager.instance.primaryFocus?.unfocus();
+        print(
+          "📁 [DEBUG LOGIN GOOGLE] Berhasil mengunci token: ${box.read('token')}",
+        );
 
+        FocusManager.instance.primaryFocus?.unfocus();
         Get.snackbar(
           "Sukses via Google",
           "Selamat datang, $userName!",
@@ -195,10 +211,8 @@ class LoginController extends GetxController {
           colorText: Colors.white,
         );
 
-        // 🟢 FIXED: Biarkan rute berpindah secara natural tanpa interupsi delete manual yang bikin crash
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (Get.currentRoute != '/main-wrapper') {
-            print("🚀 [GOOGLE LOGIN] Frame aman! Loncat ke main-wrapper.");
             Get.offAllNamed('/main-wrapper');
           }
         });
@@ -225,9 +239,6 @@ class LoginController extends GetxController {
 
   @override
   void onClose() {
-    print(
-      "🔴 LoginController onClose dipanggil secara bersih oleh sistem GetX",
-    );
     emailController.dispose();
     passwordController.dispose();
     _isProcessing = false;

@@ -1,21 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/login_controller.dart';
+import '../../../routes/app_pages.dart';
 
 class LoginView extends GetView<LoginController> {
   const LoginView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Reset controller dengan aman
-    if (Get.isRegistered<LoginController>()) {
-      final existingController = Get.find<LoginController>();
-      if (!existingController.isLoading.value) {
-        Get.delete<LoginController>();
-      }
-    }
-
-    // Buat controller baru jika belum ada
+    // 🟢 FIX: Buat/panggil controller secara aman tanpa ada logika hapus paksa (delete) yang merusak state memori
     if (!Get.isRegistered<LoginController>()) {
       Get.put(LoginController());
     }
@@ -98,7 +91,7 @@ class LoginView extends GetView<LoginController> {
                         children: [
                           _buildEmailField(controller.emailController),
                           const SizedBox(height: 16),
-                          _buildPasswordField(), // ◄ Menggunakan fungsi bawaan di bawah
+                          _buildPasswordField(),
                           const SizedBox(height: 8),
 
                           // Remember Me & Lupa Password
@@ -258,16 +251,93 @@ class LoginView extends GetView<LoginController> {
                                     ),
                                   ),
                                   onPressed: () {
-                                    Get.snackbar(
-                                      "Face Recognition",
-                                      "Membuka sensor pemindai wajah...",
-                                      backgroundColor: const Color(0xFF2D6A4F),
-                                      colorText: Colors.white,
+                                    // 🟢 FIX JALUR POPUP: Jauh lebih aman untuk mengantisipasi form input email utama yang kosong
+                                    final TextEditingController
+                                    dialogEmailCtrl = TextEditingController();
+
+                                    // Set default text popup jika input field di form utama sudah terlanjur diisi user
+                                    if (controller
+                                        .emailController
+                                        .text
+                                        .isNotEmpty) {
+                                      dialogEmailCtrl.text = controller
+                                          .emailController
+                                          .text
+                                          .trim();
+                                    }
+
+                                    Get.defaultDialog(
+                                      title: "Verifikasi Face ID",
+                                      titleStyle: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2D6A4F),
+                                      ),
+                                      backgroundColor: Colors.white,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 10,
+                                          ),
+                                      content: Column(
+                                        children: [
+                                          const Text(
+                                            "Masukkan email akun RuangSisa Anda untuk mulai memindai wajah, Beh!",
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 15),
+                                          TextField(
+                                            controller: dialogEmailCtrl,
+                                            keyboardType:
+                                                TextInputType.emailAddress,
+                                            decoration: InputDecoration(
+                                              hintText:
+                                                  "contoh: user@gmail.com",
+                                              prefixIcon: const Icon(
+                                                Icons.email,
+                                                color: Color(0xFF2D6A4F),
+                                              ),
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      textConfirm: "Mulai Pindai",
+                                      confirmTextColor: Colors.white,
+                                      buttonColor: const Color(0xFF2D6A4F),
+                                      textCancel: "Batal",
+                                      cancelTextColor: Colors.grey,
+                                      onConfirm: () {
+                                        String finalEmail = dialogEmailCtrl.text
+                                            .trim();
+                                        if (finalEmail.isEmpty) {
+                                          Get.snackbar(
+                                            "Eror ❌",
+                                            "Email wajib diisi untuk verifikasi biometrik!",
+                                          );
+                                          return;
+                                        }
+                                        Get.back(); // Tutup popup dialog
+
+                                        // 🚀 TERBANG LANGSUNG KE HALAMAN UTAMA FACE RECOGNITION
+                                        Get.toNamed(
+                                          Routes.FACE_SCAN,
+                                          arguments: {
+                                            'mode': 'login',
+                                            'email': finalEmail,
+                                          },
+                                        );
+                                      },
                                     );
                                   },
                                   icon: const Icon(
-                                    Icons
-                                        .face_rounded, // ◄ FIXED: Pakai ikon universal yang pasti ada
+                                    Icons.face_rounded,
                                     color: Color(0xFF2D6A4F),
                                     size: 20,
                                   ),
@@ -288,18 +358,7 @@ class LoginView extends GetView<LoginController> {
                           Center(
                             child: GestureDetector(
                               onTap: () {
-                                if (Get.isRegistered<LoginController>()) {
-                                  final ctrl = Get.find<LoginController>();
-                                  if (!ctrl.isLoading.value) {
-                                    Get.delete<LoginController>();
-                                  }
-                                }
-                                Future.delayed(
-                                  const Duration(milliseconds: 50),
-                                  () {
-                                    Get.offAllNamed('/register');
-                                  },
-                                );
+                                Get.offAllNamed('/register');
                               },
                               child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -379,9 +438,8 @@ class LoginView extends GetView<LoginController> {
     );
   }
 
-  // 🟢 SAFETY BYPASS: Buat toggle mata lokal dulu biar aman dari salah nama variabel controller lu, Beh!
   Widget _buildPasswordField() {
-    final isHiddenLocal = true.obs; // Penyelamat error getter
+    final isHiddenLocal = true.obs;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

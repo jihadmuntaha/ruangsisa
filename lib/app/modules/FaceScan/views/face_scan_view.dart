@@ -21,15 +21,49 @@ class FaceScanView extends GetView<FaceScanController> {
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 40),
-            const Text(
-              "Posisikan Wajah di Dalam Lingkaran",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+            const SizedBox(height: 30),
+
+            // 🍏 1. INDIKATOR STEP LANGKAH (Hanya muncul saat mode registrasi)
+            if (controller.mode == 'register')
+              Obx(
+                () => Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2D6A4F).withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    "Langkah ${controller.currentStep.value} dari 3",
+                    style: const TextStyle(
+                      color: Color(0xFF52B788),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 16),
+
+            // 🍏 2. FIX TEXT UTAMA: Sekarang dinamis mengikuti pergerakan muka lu, Beh!
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Obx(
+                () => Text(
+                  controller.stepInstruction.value,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
+
             const SizedBox(height: 8),
             Text(
               "Pastikan pencahayaan cukup terang, Beh!",
@@ -38,9 +72,9 @@ class FaceScanView extends GetView<FaceScanController> {
                 fontSize: 12,
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 30),
 
-            // 🟢 AREA KAMERA BULAT ANTI-GEPENG & ANTI-BLACK SCREEN
+            // 🟢 AREA KAMERA BULAT ANTI-GEPENG & ANTI-BLACK SCREEN (Udah Mantap)
             Center(
               child: Obx(() {
                 if (!controller.isCameraInitialized.value ||
@@ -56,33 +90,44 @@ class FaceScanView extends GetView<FaceScanController> {
                   );
                 }
 
-                return ClipOval(
-                  child: SizedBox(
-                    width: 280,
-                    height: 280,
-                    child: ClipRect(
-                      child: OverflowBox(
-                        alignment: Alignment.center,
-                        child: FittedBox(
-                          fit: BoxFit
-                              .cover, // Memotong bagian luar sensor agar aspek rasio wajah tetap 1:1 normal
-                          child: SizedBox(
-                            // Mengambil nilai dimensi render asli dari aspek fisik sensor HP Realme lu
-                            width:
-                                controller
-                                    .cameraController!
-                                    .value
-                                    .previewSize
-                                    ?.height ??
-                                1080,
-                            height:
-                                controller
-                                    .cameraController!
-                                    .value
-                                    .previewSize
-                                    ?.width ??
-                                1920,
-                            child: CameraPreview(controller.cameraController!),
+                return Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: controller.isLoading.value
+                          ? const Color(0xFF52B788)
+                          : const Color(0xFF2D6A4F),
+                      width: 4,
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: SizedBox(
+                      width: 272,
+                      height: 272,
+                      child: ClipRect(
+                        child: OverflowBox(
+                          alignment: Alignment.center,
+                          child: FittedBox(
+                            fit: BoxFit.cover,
+                            child: SizedBox(
+                              width:
+                                  controller
+                                      .cameraController!
+                                      .value
+                                      .previewSize
+                                      ?.height ??
+                                  1080,
+                              height:
+                                  controller
+                                      .cameraController!
+                                      .value
+                                      .previewSize
+                                      ?.width ??
+                                  1920,
+                              child: CameraPreview(
+                                controller.cameraController!,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -118,9 +163,14 @@ class FaceScanView extends GetView<FaceScanController> {
                             Icons.face_unlock_outlined,
                             color: Colors.white,
                           ),
-                          label: const Text(
-                            "Mulai Pindai Wajah",
-                            style: TextStyle(
+                          // 🍏 Teks tombol dinamis menyesuaikan alur eksekusi
+                          label: Text(
+                            controller.mode == 'register'
+                                ? (controller.currentStep.value == 3
+                                      ? "Kunci Data Wajah"
+                                      : "Ambil Foto Sudut Ini")
+                                : "Mulai Pindai Wajah",
+                            style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 15,

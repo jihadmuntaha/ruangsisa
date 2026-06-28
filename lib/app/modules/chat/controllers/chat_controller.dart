@@ -6,7 +6,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 
 class ChatController extends GetxController {
-  final String baseUrl = "http://172.24.243.45:8000";
+  final String baseUrl = "http://10.20.166.45:8000";
 
   var messages = <Map<String, dynamic>>[].obs;
   var isLoading = false.obs;

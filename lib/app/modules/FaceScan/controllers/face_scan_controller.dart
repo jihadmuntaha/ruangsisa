@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import '../../../../main.dart';
 import 'package:http/http.dart' as http;
 
 class FaceScanController extends GetxController {
@@ -20,6 +19,9 @@ class FaceScanController extends GetxController {
   var stepInstruction = "Posisikan Wajah Menghadap DEPAN".obs;
   List<XFile> capturedFiles = []; // Menampung hasil jepretan 3 sudut foto
 
+  // 📡 IP SAKRAL BACKEND DETIK INI (Satukan di satu tempat agar mudah diubah)
+  final String ipBackend = "10.20.166.45:8000";
+
   @override
   void onInit() {
     super.onInit();
@@ -31,25 +33,32 @@ class FaceScanController extends GetxController {
   }
 
   void _initCamera() async {
-    if (cameras.isEmpty) {
-      Get.snackbar("Eror", "Kamera perangkat tidak terdeteksi, Beh!");
-      return;
-    }
-    CameraDescription? frontCamera;
-    for (var camera in cameras) {
-      if (camera.lensDirection == CameraLensDirection.front) {
-        frontCamera = camera;
-        break;
-      }
-    }
-    frontCamera ??= cameras.first;
-    cameraController = CameraController(
-      frontCamera,
-      ResolutionPreset.medium,
-      enableAudio: false,
-    );
-
     try {
+      // Mengambil daftar kamera langsung dari sistem biometrik perangkat
+      final List<CameraDescription> availableDevCameras =
+          await availableCameras();
+
+      if (availableDevCameras.isEmpty) {
+        Get.snackbar("Eror", "Kamera perangkat tidak terdeteksi, Beh!");
+        return;
+      }
+
+      CameraDescription? frontCamera;
+      for (var camera in availableDevCameras) {
+        if (camera.lensDirection == CameraLensDirection.front) {
+          frontCamera = camera;
+          break;
+        }
+      }
+
+      frontCamera ??= availableDevCameras.first;
+
+      cameraController = CameraController(
+        frontCamera,
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
+
       await cameraController!.initialize();
       isCameraInitialized.value = true;
     } catch (e) {
@@ -90,7 +99,7 @@ class FaceScanController extends GetxController {
           );
           return;
         } else {
-          // Jika sudah terkumpul 3 foto (Step 3 Selesai), langsung satukan paket kiriman ke FastAPI!
+          // Jika sudah terkumpul 3 foto (Step 3 Selesai), kirim paket ke FastAPI!
           stepInstruction.value =
               "Sedang mengunci karakteristik wajah seluruh muka lu...";
           await _sendPremiumFaceIdRegister();
@@ -106,82 +115,100 @@ class FaceScanController extends GetxController {
     }
   }
 
-  // 🔥 ACTION 1: KIRIM MULTIPLE FILE SEKALIGUS KE API REGISTER PREMIUM (BYPASS TOKEN)
+  // 🔥 ACTION 1: KIRIM MULTIPLE FILE SEKALIGUS KE API REGISTER PREMIUM
   Future<void> _sendPremiumFaceIdRegister() async {
-    String baseUrl = "http://172.24.243.45:8000/auth/register-face-premium";
-    var request = http.MultipartRequest(
-      'POST',
-      Uri.parse("$baseUrl?email=$emailForLogin"),
-    );
+    try {
+      String url =
+          "http://$ipBackend/auth/register-face-premium?email=$emailForLogin";
+      var request = http.MultipartRequest('POST', Uri.parse(url));
 
-    for (var file in capturedFiles) {
-      request.files.add(
-        await http.MultipartFile.fromPath('files', file.path),
-      ); // ◄ Dikirim ke list parameter 'files'
-    }
+      for (var file in capturedFiles) {
+        request.files.add(
+          await http.MultipartFile.fromPath('files', file.path),
+        );
+      }
 
-    var streamedResponse = await request.send();
-    var response = await http.Response.fromStream(streamedResponse);
-    isLoading.value = false;
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      isLoading.value = false;
 
-    if (response.statusCode == 200) {
-      Get.snackbar(
-        "Premium Face ID Aktif 🍏🎉",
-        "Sistem biometrik se-muka lu sukses dikunci!",
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+      if (response.statusCode == 200) {
+        Get.snackbar(
+          "Premium Face ID Aktif 🍏🎉",
+          "Sistem biometrik se-muka lu sukses dikunci!",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
 
-      // Bersihkan list & lempar masuk ke halaman login depan biar user bisa ngetes langsung login mukanya!
-      capturedFiles.clear();
-      Get.offAllNamed('/login');
-    } else {
-      capturedFiles.clear();
-      currentStep.value = 1;
-      stepInstruction.value = "Posisikan Wajah Menghadap DEPAN";
-      Get.snackbar(
-        "Gagal ❌",
-        "OpenCV gagal membaca polat wajah lu. Ulangi dari posisi depan, Beh!",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+        capturedFiles.clear();
+        Get.offAllNamed('/login');
+      } else {
+        _resetRegisterFlow();
+        Get.snackbar(
+          "Gagal ❌",
+          "OpenCV gagal membaca pola wajah lu. Ulangi dari posisi depan, Beh!",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      isLoading.value = false;
+      _resetRegisterFlow();
+      Get.snackbar("Eror Koneksi", "Gagal menghubungi server: $e");
     }
   }
 
   // 🔑 ACTION 2: JALUR LOGIN INSTAN BIOMETRIK NYOCOKIN MULTI-ANGLE DATA DI DB
   Future<void> _executeFaceIdLogin(XFile imageFile) async {
-    String url =
-        "http://172.24.243.45:8000/auth/login-face?email=$emailForLogin";
-    var request = http.MultipartRequest('POST', Uri.parse(url));
-    request.files.add(
-      await http.MultipartFile.fromPath('file', imageFile.path),
-    );
+    try {
+      // 🟢 FIX: Sekarang kepala IP-nya otomatis ikut sinkron ke 10.20.166.45 murni!
+      String url = "http://$ipBackend/auth/login-face?email=$emailForLogin";
+      var request = http.MultipartRequest('POST', Uri.parse(url));
+      request.files.add(
+        await http.MultipartFile.fromPath('file', imageFile.path),
+      );
 
-    var streamedResponse = await request.send();
-    var response = await http.Response.fromStream(streamedResponse);
-    isLoading.value = false;
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      isLoading.value = false;
 
-    if (response.statusCode == 200) {
-      final responseData = json.decode(response.body);
-      if (responseData['token'] != null) {
-        box.write(
-          'token',
-          responseData['token'],
-        ); // Amankan token baru untuk dashboard
+      if (response.statusCode == 200) {
+        // 🟢 PERBAIKAN: Paksa tipe data body menjadi Map murni
+        // 🟢 SOLUSI BERSIH: Langsung decode karena Dart sudah tahu ini String JSON mentah
+        final dynamic decoded = jsonDecode(response.body);
+        final Map<String, dynamic> data = Map<String, dynamic>.from(decoded);
+
+        String internalToken = data['access_token'] ?? data['token'] ?? '';
+        var userData = data['user'] ?? data;
+
+        // 🟢 KUNCI DI SINI JUGA, BEH! BIAR PROFIL GAK AMNESIA
+        final box = GetStorage();
+        await box.write('access_token', internalToken.toString());
+        await box.write('token', internalToken.toString());
+        await box.write('user_data', userData);
+        await box.write('user', userData);
+
+        print("📸 [FACE ID SUCCESS] Sesi berhasil dikunci murni!");
+
+        Get.offAllNamed('/main-wrapper');
+      } else {
+        Get.snackbar(
+          "Akses Ditolak ❌",
+          "Wajah atau data email anda tidak sinkron! Cari tempat terang.",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
       }
-      Get.snackbar(
-        "Login Sukses 🟢",
-        "Selamat datang kembali kontributor RuangSisa!",
-      );
-      Get.offAllNamed('/home');
-    } else {
-      Get.snackbar(
-        "Akses Ditolak ❌",
-        "Wajah atau data email anda tidak sinkron! Cari tempat terang.",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+    } catch (e) {
+      isLoading.value = false;
+      Get.snackbar("Eror Jaringan", "Gagal validasi ke server backend: $e");
     }
+  }
+
+  void _resetRegisterFlow() {
+    capturedFiles.clear();
+    currentStep.value = 1;
+    stepInstruction.value = "Posisikan Wajah Menghadap DEPAN";
   }
 
   @override

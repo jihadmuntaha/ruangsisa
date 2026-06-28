@@ -4,7 +4,7 @@ import 'package:get_storage/get_storage.dart';
 
 class AuthProvider extends GetConnect {
   // 🟢 2. FIXED: Satukan kiblat alamat IP laptop lu ke satu variabel global provider
-  final String baseUrlAuth = "http://172.24.243.45:8000/auth";
+  final String baseUrlAuth = "http://10.20.166.45:8000/auth";
 
   @override
   void onInit() {

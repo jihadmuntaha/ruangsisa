@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import '../controllers/profile_controller.dart';
 
 class ProfileView extends StatelessWidget {
@@ -38,10 +39,45 @@ class ProfileView extends StatelessWidget {
             ),
             child: Column(
               children: [
-                const CircleAvatar(
-                  radius: 40,
-                  backgroundColor: const Color(0xFF2D6A4F),
-                  child: Icon(Icons.person, size: 40, color: Colors.white),
+                // 📸 1. FOTO PROFIL INTERAKTIF (Bisa diklik buat ganti foto pake kamera Realme)
+                GestureDetector(
+                  onTap: () => _showAvatarPickerSheet(context, controller),
+                  child: Stack(
+                    children: [
+                      Obx(
+                        () => CircleAvatar(
+                          radius: 40,
+                          backgroundColor: const Color(0xFF2D6A4F),
+                          backgroundImage: controller.avatarUrl.value.isNotEmpty
+                              ? NetworkImage(controller.avatarUrl.value)
+                              : null,
+                          child: controller.avatarUrl.value.isEmpty
+                              ? const Icon(
+                                  Icons.person,
+                                  size: 40,
+                                  color: Colors.white,
+                                )
+                              : null,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF52B788),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -159,7 +195,7 @@ class ProfileView extends StatelessWidget {
                 return _buildMiniGrid(
                   item['title'] ?? '',
                   item['post_type'] ?? 'Donasi',
-                  item['images'], // Kolom gambar dari database backend
+                  item['images'],
                 );
               },
             );
@@ -169,18 +205,51 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  // 🟢 PERBAIKAN TOTAL: Fungsi render gambar anti-404 dan anti-double-slash
+  // 🟢 INTERAKTIF: Modal pilih sumber foto profil
+  void _showAvatarPickerSheet(
+    BuildContext context,
+    ProfileController controller,
+  ) {
+    Get.bottomSheet(
+      Container(
+        color: Colors.white,
+        padding: const EdgeInsets.all(16),
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Color(0xFF2D6A4F)),
+              title: const Text('Ambil via Kamera HP Realme, Beh!'),
+              onTap: () {
+                Get.back();
+                controller.pickAndUploadAvatar(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.photo_library,
+                color: Color(0xFF2D6A4F),
+              ),
+              title: const Text('Pilih dari Galeri Foto'),
+              onTap: () {
+                Get.back();
+                controller.pickAndUploadAvatar(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 🟢 FIX IP SAKRAL: Diselaraskan biar gambar postingan gak 404
   Widget _buildMiniGrid(String title, String status, String? imageName) {
-    const String ipLaptop = "172.24.243.45"; // ◄ IP laptop lu saat ini
+    const String ipLaptop = "10.20.166.45";
     String? finalImageUrl;
 
     if (imageName != null &&
         imageName.isNotEmpty &&
         imageName != 'foto_barang_default.png') {
-      // Mengantisipasi jika database menyimpan string berupa path penuh (cth: /uploads/file.jpg)
       String cleanFileName = imageName.split('/').last;
-
-      // Menggunakan route mount murni FastAPI kita tanpa subfolder /static/
       finalImageUrl = "http://$ipLaptop:8000/uploads/$cleanFileName";
     }
 
@@ -283,11 +352,17 @@ class _StatItem extends StatelessWidget {
   }
 }
 
-// --- SUB-VIEW TAMBAHAN: EDIT PROFIL ---
+// --- SUB-VIEW TAMBAHAN: EDIT PROFIL (FIXED & FULLY INTERACTIVE) ---
 class EditProfileView extends GetView<ProfileController> {
   const EditProfileView({super.key});
+
   @override
   Widget build(BuildContext context) {
+    // Controller Text Lokal untuk menampung ketikan baru si user
+    final nameCtrl = TextEditingController(text: controller.name.value);
+    final bioCtrl = TextEditingController(text: controller.bio.value);
+    final locationCtrl = TextEditingController(text: controller.location.value);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -305,14 +380,20 @@ class EditProfileView extends GetView<ProfileController> {
             child: CircleAvatar(
               radius: 50,
               backgroundColor: Color(0xFF2D6A4F),
-              child: Icon(Icons.camera_alt, color: Colors.white),
+              child: Icon(
+                Icons.mode_edit_outline_outlined,
+                color: Colors.white,
+                size: 32,
+              ),
             ),
           ),
           const SizedBox(height: 24),
-          _buildField('Nama Lengkap', controller.name.value),
-          _buildField('Bio', controller.bio.value),
-          _buildField('Lokasi', controller.location.value),
+          _buildField('Nama Lengkap', nameCtrl),
+          _buildField('Bio', bioCtrl),
+          _buildField('Lokasi', locationCtrl),
           const SizedBox(height: 24),
+
+          // Tombol eksekusi simpan ke FastAPI database laptop lu, Beh!
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2D6A4F),
@@ -321,7 +402,14 @@ class EditProfileView extends GetView<ProfileController> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            onPressed: () => Get.back(),
+            onPressed: () async {
+              Get.back(); // Kembali ke layar profil utama
+              await controller.updateProfileData(
+                nameCtrl.text,
+                bioCtrl.text,
+                locationCtrl.text,
+              );
+            },
             child: const Text(
               'Simpan Perubahan',
               style: TextStyle(
@@ -335,11 +423,11 @@ class EditProfileView extends GetView<ProfileController> {
     );
   }
 
-  Widget _buildField(String label, String value) {
+  Widget _buildField(String label, TextEditingController txtController) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextField(
-        controller: TextEditingController(text: value),
+        controller: txtController,
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
@@ -387,23 +475,27 @@ class SettingsView extends GetView<ProfileController> {
             onTap: () {
               Get.toNamed(
                 '/face-scan',
-                arguments: {'mode': 'register', 'email': ''},
+                arguments: {
+                  'mode': 'register',
+                  'email': controller.email.value,
+                },
               );
             },
           ),
           const Divider(height: 1),
 
+          // 🟢 INTERAKTIF: Ditautkan ke modal popup ubah password murni
           ListTile(
             leading: const Icon(
               Icons.lock_outline_rounded,
               color: Colors.blueGrey,
             ),
-            title: const Text('Privasi Akun'),
+            title: const Text('Ubah Kata Sandi Akun'),
             subtitle: const Text(
-              'Kelola visibilitas postingan tekstil & data pribadi',
+              'Perbarui kredensial password login lokal berkala',
             ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
+            onTap: () => _showChangePasswordPopUp(),
           ),
           const Divider(height: 1),
 
@@ -474,6 +566,37 @@ class SettingsView extends GetView<ProfileController> {
           ),
         ],
       ),
+    );
+  }
+
+  // 🟢 INTERAKTIF: Dialog popup ganti password bawaan GetX
+  void _showChangePasswordPopUp() {
+    final oldPassCtrl = TextEditingController();
+    final newPassCtrl = TextEditingController();
+
+    Get.defaultDialog(
+      title: "Ubah Kata Sandi",
+      buttonColor: const Color(0xFF2D6A4F),
+      confirmTextColor: Colors.white,
+      textConfirm: "Update",
+      textCancel: "Batal",
+      cancelTextColor: Colors.grey,
+      content: Column(
+        children: [
+          TextField(
+            controller: oldPassCtrl,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: "Kata Sandi Lama"),
+          ),
+          TextField(
+            controller: newPassCtrl,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: "Kata Sandi Baru"),
+          ),
+        ],
+      ),
+      onConfirm: () =>
+          controller.changeAccountPassword(oldPassCtrl.text, newPassCtrl.text),
     );
   }
 

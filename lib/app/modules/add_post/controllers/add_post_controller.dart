@@ -61,7 +61,7 @@ class AddPostController extends GetxController {
 
   void _setFallbackCategories() {
     categories.value = [
-      {'id': 1, 'name': 'Pakaian'},
+      {'id': 1, 'name': 'Fashion'},
       {'id': 2, 'name': 'Elektronik'},
       {'id': 3, 'name': 'Furnitur'},
       {'id': 4, 'name': 'Buku'},
