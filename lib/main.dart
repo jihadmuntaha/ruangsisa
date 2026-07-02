@@ -1,21 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:camera/camera.dart'; // ◄ FIXED: Tambah titik koma (;) biar gak eror syntaks
+import 'package:camera/camera.dart';
+import 'package:firebase_core/firebase_core.dart'; // ◄ Tambah import ini
 import 'app/routes/app_pages.dart';
+import 'app/data/services/notification_service.dart'; // ◄ Tambah import service baru lu
 
-// 🟢 VARIABEL GLOBAL: Menampung daftar hardware kamera HP Realme lu
 List<CameraDescription> cameras = [];
 
 void main() async {
-  // 1. Pastikan binding Flutter sudah siap sebelum inisialisasi library pihak ketiga
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Inisialisasi GetStorage untuk session token login lokal
+  // 1. Inisialisasi GetStorage
   await GetStorage.init();
 
+  // 2. 🟢 SUNTIKKAN INI: Jalankan Firebase murni sebelum aplikasi start
   try {
-    // 3. FIXED: Ambil semua list sensor kamera (Depan & Belakang) saat aplikasi pertama start
+    await Firebase.initializeApp();
+    // Jalankan Notification Service GetX
+    await Get.putAsync(() => NotificationService().init());
+  } catch (e) {
+    print("🚨 [FIREBASE INIT ERROR] Gagal inisialisasi Firebase: $e");
+  }
+
+  // 3. Ambil sensor kamera bawaan lu
+  try {
     cameras = await availableCameras();
     print(
       "📸 [CAMERA] Sukses mendeteksi ${cameras.length} sensor kamera perangkat.",

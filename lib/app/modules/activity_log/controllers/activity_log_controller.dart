@@ -23,7 +23,7 @@ class ActivityLogController extends GetxController {
       String? token = box.read('token') ?? box.read('access_token');
       print("🔑 [LOG AUTH CHECK] Mengirim token ke backend: $token");
 
-      String url = "http://172.24.243.45:8000/user/logs";
+      String url = "http://10.20.166.45:8000/user/logs";
 
       var response = await http.get(
         Uri.parse(url),

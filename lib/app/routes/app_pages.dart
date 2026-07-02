@@ -14,6 +14,8 @@ import '../modules/login/bindings/login_binding.dart';
 import '../modules/login/views/login_view.dart';
 import '../modules/main_wrapper/bindings/main_wrapper_binding.dart';
 import '../modules/main_wrapper/views/main_wrapper_view.dart';
+import '../modules/notification/bindings/notification_binding.dart';
+import '../modules/notification/views/notification_view.dart';
 import '../modules/otpverification/bindings/otpverification_binding.dart';
 import '../modules/otpverification/views/otpverification_view.dart';
 import '../modules/post_detail/bindings/post_detail_binding.dart';
@@ -102,6 +104,11 @@ class AppPages {
       name: _Paths.ACTIVITY_LOG,
       page: () => const ActivityLogView(),
       binding: ActivityLogBinding(),
+    ),
+    GetPage(
+      name: _Paths.NOTIFICATION,
+      page: () => const NotificationView(),
+      binding: NotificationBinding(),
     ),
   ];
 }

@@ -192,10 +192,34 @@ class ProfileView extends StatelessWidget {
               ),
               itemBuilder: (context, index) {
                 final item = controller.userContributions[index];
-                return _buildMiniGrid(
-                  item['title'] ?? '',
-                  item['post_type'] ?? 'Donasi',
-                  item['images'],
+
+                // 🟢 1. AMANKAN URL GAMBAR: Biar gambar barang kontribusi lu meletup keluar murni!
+                String? finalImageUrl;
+                if (item['images'] != null &&
+                    item['images'].toString().isNotEmpty) {
+                  String imagePath = item['images'].toString();
+                  String cleanFileName = imagePath.split('/').last;
+                  finalImageUrl =
+                      "${controller.baseUrl}/static/uploads/$cleanFileName";
+                  // Catatan: sesuaikan 'controller.baseUrl' atau 'baseUrl' dengan variabel IP lu ya!
+                }
+
+                // 🟢 2. BUNGKUS DENGAN GESTURE DETECTOR UNTUK NAVIGASI KE DETAIL
+                return GestureDetector(
+                  onTap: () {
+                    Get.toNamed(
+                      '/post-detail',
+                      arguments: {
+                        'post_id': item['id'],
+                      }, // 🔥 Mengirim ID postingan kontribusi
+                    );
+                  },
+                  child: _buildMiniGrid(
+                    item['title'] ?? '',
+                    item['post_type'] ?? '',
+                    finalImageUrl ??
+                        item['images'], // 🔥 Gunakan URL gambar steril ber-IP
+                  ),
                 );
               },
             );
@@ -250,7 +274,7 @@ class ProfileView extends StatelessWidget {
         imageName.isNotEmpty &&
         imageName != 'foto_barang_default.png') {
       String cleanFileName = imageName.split('/').last;
-      finalImageUrl = "http://$ipLaptop:8000/uploads/$cleanFileName";
+      finalImageUrl = "http://$ipLaptop:8000/static/uploads/$cleanFileName";
     }
 
     return Container(

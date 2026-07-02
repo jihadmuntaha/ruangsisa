@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../../data/providers/auth_provider.dart';
+import '../../../data/services/notification_service.dart';
 
 class LoginController extends GetxController {
   final AuthProvider _authProvider = AuthProvider();
@@ -202,6 +203,7 @@ class LoginController extends GetxController {
         print(
           "📁 [DEBUG LOGIN GOOGLE] Berhasil mengunci token: ${box.read('token')}",
         );
+        Get.find<NotificationService>().getDeviceToken();
 
         FocusManager.instance.primaryFocus?.unfocus();
         Get.snackbar(

@@ -43,17 +43,25 @@ class HomeView extends StatelessWidget {
         actions: [
           Obx(
             () => Stack(
+              alignment: Alignment.center,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.notifications_none_rounded, size: 26),
-                  onPressed: () {},
+                  icon: const Icon(
+                    Icons.notifications_active_outlined,
+                    color: Color(0xFF2D6A4F),
+                  ),
+                  onPressed: () {
+                    print("🔔 [NAVIGASI] Tombol lonceng diklik!");
+                    Get.toNamed('/notification');
+                  },
                 ),
+                // Jika ada notifikasi yang belum dibaca, munculkan lingkaran merah penanda jumlahnya
                 if (controller.unreadCount.value > 0)
                   Positioned(
-                    right: 8,
-                    top: 8,
+                    right: 6,
+                    top: 6,
                     child: Container(
-                      padding: const EdgeInsets.all(2),
+                      padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
                         color: Colors.red,
                         shape: BoxShape.circle,
@@ -67,6 +75,7 @@ class HomeView extends StatelessWidget {
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10,
+                          fontWeight: FontWeight.bold,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -75,7 +84,6 @@ class HomeView extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
         ],
       ),
       body: Column(
@@ -200,9 +208,28 @@ class HomeView extends StatelessWidget {
                     if (post['images'] != null &&
                         post['images'].toString().isNotEmpty) {
                       String imagePath = post['images'].toString();
-                      // Ambil murni nama filenya saja, cegah penumpukan kata '/uploads/'
+
+                      // Ambil murni nama filenya saja
                       String cleanFileName = imagePath.split('/').last;
-                      finalImageUrl = "$baseUrl/uploads/$cleanFileName";
+
+                      // Ubah dari /uploads/ menjadi /static/uploads/ agar pas dengan FastAPI baru
+                      finalImageUrl = "$baseUrl/static/uploads/$cleanFileName";
+                    }
+
+                    String? finalAvatarUrl;
+                    String? rawAvatar =
+                        post['author']?['avatar'] ?? post['user']?['avatar'];
+
+                    if (rawAvatar != null && rawAvatar.toString().isNotEmpty) {
+                      // Jika avatar adalah link Google (OAuth login), langsung pakai tanpa modifikasi
+                      if (rawAvatar.startsWith('http')) {
+                        finalAvatarUrl = rawAvatar;
+                      } else {
+                        // Jika avatar berupa file lokal, bersihkan nama filenya dan arahkan ke static/uploads
+                        String cleanAvatarName = rawAvatar.split('/').last;
+                        finalAvatarUrl =
+                            "$baseUrl/static/uploads/$cleanAvatarName";
+                      }
                     }
 
                     return GestureDetector(
@@ -215,12 +242,15 @@ class HomeView extends StatelessWidget {
                       child: FeedSosmedCard(
                         postId: post['id'],
                         name: ownerName,
+                        avatarUrl:
+                            finalAvatarUrl, // 🔥 Ganti pakai variabel finalAvatarUrl yang sudah steril!
                         type: post['post_type'] ?? 'Donasi',
                         title: post['title'] ?? 'Tanpa Judul',
                         desc: post['description'] ?? '',
                         price: formatPrice,
                         btnLabel: labelTombol,
                         imageUrl: finalImageUrl,
+                        createdAt: post['created_at'] ?? '',
                         onChatPressed: () {
                           Get.toNamed(
                             '/chat',
@@ -252,6 +282,8 @@ class FeedSosmedCard extends StatelessWidget {
   final String btnLabel;
   final String? price;
   final String? imageUrl;
+  final String? avatarUrl;
+  final String? createdAt;
   final VoidCallback onChatPressed;
   final int postId;
 
@@ -265,8 +297,36 @@ class FeedSosmedCard extends StatelessWidget {
     required this.onChatPressed,
     this.price,
     this.imageUrl,
+    this.avatarUrl,
+    this.createdAt,
     required this.postId,
   }) : super(key: key);
+
+  String formatTimeAgo(String? createdAtStr) {
+    if (createdAtStr == null || createdAtStr.isEmpty) return 'Baru saja';
+
+    try {
+      // Parsing string ISO dari backend (contoh: 2026-07-01T16:18:15)
+      DateTime postTime = DateTime.parse(createdAtStr).toLocal();
+      DateTime now = DateTime.now();
+      Duration difference = now.difference(postTime);
+
+      if (difference.inSeconds < 60) {
+        return 'Baru saja';
+      } else if (difference.inMinutes < 60) {
+        return '${difference.inMinutes} menit yang lalu';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours} jam yang lalu';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} hari yang lalu';
+      } else {
+        // Jika sudah lebih dari seminggu, tampilkan tanggal format biasa
+        return '${postTime.day}/${postTime.month}/${postTime.year}';
+      }
+    } catch (e) {
+      return 'Baru saja';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -287,17 +347,24 @@ class FeedSosmedCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ListTile(
-            leading: const CircleAvatar(
-              backgroundColor: Color(0xFF2D6A4F),
-              child: Icon(Icons.person, color: Colors.white, size: 20),
+            // 🟢 SEKALIAN AVATARNYA MUNCUL DI SINI
+            leading: CircleAvatar(
+              backgroundColor: const Color(0xFF2D6A4F),
+              backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty
+                  ? NetworkImage(avatarUrl!)
+                  : null,
+              child: avatarUrl == null || avatarUrl!.isEmpty
+                  ? const Icon(Icons.person, color: Colors.white, size: 20)
+                  : null,
             ),
             title: Text(
               name,
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
-            subtitle: const Text(
-              'Baru saja',
-              style: TextStyle(fontSize: 11, color: Colors.grey),
+            // 🟢 UBAH SUBTITLE MENJADI FORMAT DINAMIS SAKTI
+            subtitle: Text(
+              formatTimeAgo(createdAt),
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

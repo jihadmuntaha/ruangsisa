@@ -1,3 +1,9 @@
+// 🟢 PERBAIKAN MODERN KOTLIN DSL: Mendaftarkan plugin secara global tanpa blok buildscript lama
+plugins {
+    // Daftarkan plugin Google Services resmi agar bisa dipakai oleh android/app dengan status tidak langsung diterapkan di root
+    id("com.google.gms.google-services") version "4.4.1" apply false
+}
+
 allprojects {
     repositories {
         google()
@@ -15,6 +21,7 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+
 subprojects {
     project.evaluationDependsOn(":app")
 }

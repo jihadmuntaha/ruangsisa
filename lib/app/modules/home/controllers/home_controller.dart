@@ -2,9 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../../data/providers/post_provider.dart';
+// 🟢 1. TAMBAHKAN IMPORT CONTROLLER NOTIFIKASI LU
+import '../../notification/controllers/notification_controller.dart';
+import '../../../data/services/notification_service.dart';
 
 class HomeController extends GetxController {
   final PostProvider _postProvider = Get.put(PostProvider());
+
+  // 🟢 2. SUNTIKKAN NOTIFICATION CONTROLLER DI SINI
+  final NotificationController _notificationController = Get.put(
+    NotificationController(),
+  );
 
   late ScrollController scrollController;
   var isLoading = false.obs;
@@ -12,14 +20,25 @@ class HomeController extends GetxController {
   var userData = Rxn<Map<String, dynamic>>();
 
   var selectedCategoryId = Rx<int?>(null);
+
+  // 🟢 3. IKAT UNREAD COUNT KE DAFTAR NOTIFIKASI YANG BELUM DIBACA ('is_read' == 'false')
   var unreadCount = 0.obs;
 
   @override
   void onInit() {
     super.onInit();
+    Get.find<NotificationService>().getDeviceToken();
     scrollController = ScrollController();
     loadUserData();
     fetchTimelinePosts();
+
+    // 🟢 4. LISTEN PERUBAHAN SECARA REAL-TIME
+    // Setiap kali list notifications berubah, hitung ulang jumlah yang belum dibaca
+    ever(_notificationController.notifications, (_) {
+      unreadCount.value = _notificationController.notifications
+          .where((notif) => notif['is_read'] == 'false')
+          .length;
+    });
   }
 
   void loadUserData() {
@@ -54,7 +73,6 @@ class HomeController extends GetxController {
       );
 
       if (response.statusCode == 200 && response.body != null) {
-        // ✅ Response body sudah berupa List dari provider
         if (response.body is List) {
           final List<dynamic> data = response.body;
           postsList.assignAll(
@@ -80,9 +98,12 @@ class HomeController extends GetxController {
     }
   }
 
+  // 🟢 5. SINKRONKAN PADA METHOD REFRESH DATA
   Future<void> refreshData() async {
     await fetchTimelinePosts();
     loadUserData();
+    // Tarik data notifikasi terbaru juga pas user melakukan pull-to-refresh
+    _notificationController.fetchNotifications();
   }
 
   @override

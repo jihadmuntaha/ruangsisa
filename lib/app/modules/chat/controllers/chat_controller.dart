@@ -6,6 +6,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 
 class ChatController extends GetxController {
+  // 🟢 IP Backend disamakan dengan log terminal FastAPI asli
   final String baseUrl = "http://10.20.166.45:8000";
 
   var messages = <Map<String, dynamic>>[].obs;
@@ -15,6 +16,11 @@ class ChatController extends GetxController {
   var chatRoomId = 0.obs;
   var partnerId = 0.obs;
   var partnerName = ''.obs;
+  var partnerImage = ''.obs;
+  var partnerAvatar = ''.obs;
+
+  // RxInt untuk mentrigger update UI secara reaktif di View saat pull-to-refresh
+  var refreshTrigger = 0.obs;
 
   final messageController = TextEditingController();
   var currentUserId = 0;
@@ -22,7 +28,7 @@ class ChatController extends GetxController {
   Timer? _pollingTimer;
   final scrollController = ScrollController();
 
-  // 🟢 AMBIL TOKEN SECARA VALIDE & BERSIH
+  // 🟢 AMBIL TOKEN SECARA VALID & BERSIH
   String? getToken() {
     final box = GetStorage();
     String? token = box.read('access_token') ?? box.read('token');
@@ -45,24 +51,55 @@ class ChatController extends GetxController {
     print("📱 CHAT CONTROLLER INIT");
     print("Current User ID: $currentUserId");
 
-    if (Get.arguments != null) {
+    // 🟢 SUNTIKAN PENGAMAN TOTAL TERHADAP TRAGEDI NULL CHECK OPERATOR
+    if (Get.arguments != null && Get.arguments is Map) {
       print("📦 Arguments received: ${Get.arguments}");
+      final Map<String, dynamic> args = Map<String, dynamic>.from(
+        Get.arguments,
+      );
 
-      final int targetUserId = Get.arguments['user_id'] ?? 0;
-      final String targetName = Get.arguments['name'] ?? 'Kontributor';
-      final int? existingRoomId = Get.arguments['chat_room_id'];
+      // 🎯 1. JALUR KLIK NOTIFIKASI (`chat_id`)
+      if (args.containsKey('chat_id') && args['chat_id'] != null) {
+        final String rawChatId = args['chat_id'].toString();
+        chatRoomId.value = int.tryParse(rawChatId) ?? 0;
+        print(
+          "🔔 [NOTIF CLICK] Berhasil masuk via Notifikasi! Room ID: ${chatRoomId.value}",
+        );
 
-      setChatPartner(targetUserId, targetName);
+        // 🟢 GEBREG SEMUA PROPERTI BIAR VIEW LU KAGAK KELAPARAN DATA NULL SAMA SEKALI!
+        partnerId.value =
+            999; // Set di atas 0 agar 'if (controller.partnerId.value == 0)' di View lu gak kepicu!
+        partnerName.value = args['name']?.toString() ?? "Kontributor RuangSisa";
+        partnerImage.value = "";
+        partnerAvatar.value = "";
 
-      if (existingRoomId != null && existingRoomId > 0) {
-        chatRoomId.value = existingRoomId;
-        print("✅ Menggunakan Room ID lama: $existingRoomId");
-        fetchChatHistory();
+        // Kosongkan pesan lama dulu biar gak crash pas rendering awal
+        messages.clear();
+
+        if (chatRoomId.value > 0) {
+          fetchChatHistory();
+        }
       }
+      // 🎯 2. JALUR KLIK DARI UI BIASA (Alur lama lu yang super aman)
+      else {
+        final int targetUserId = args['user_id'] ?? 0;
+        final String targetName = args['name'] ?? 'Kontributor';
+        final int? existingRoomId = args['chat_room_id'];
+
+        setChatPartner(targetUserId, targetName);
+
+        if (existingRoomId != null && existingRoomId > 0) {
+          chatRoomId.value = existingRoomId;
+          print("✅ Menggunakan Room ID lama: $existingRoomId");
+          fetchChatHistory();
+        }
+      }
+    } else {
+      print("⚠️ Get.arguments murni null atau bukan berupa Map!");
     }
 
-    // Polling background pencari pesan baru setiap 3 detik
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+    // Polling aktif tiap 2 detik
+    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (chatRoomId.value != 0 && !isLoading.value) {
         _silentFetchMessages();
       }
@@ -71,7 +108,6 @@ class ChatController extends GetxController {
 
   void _loadCurrentUser() {
     final box = GetStorage();
-    // Tarik ulang setiap kali controller dimuat agar sinkron pas ganti akun
     var user = box.read('user') ?? box.read('user_data');
 
     if (user != null) {
@@ -88,10 +124,15 @@ class ChatController extends GetxController {
     print("🤝 Menyetel Target Chat: ID=$userId, Nama=$name");
   }
 
+  Future<void> refreshActiveRooms() async {
+    refreshTrigger.value++;
+    _loadCurrentUser();
+  }
+
   Future<void> initiateChatRoom() async {
     try {
       isLoading.value = true;
-      _loadCurrentUser(); // Paksa reload user ID biar gak pakai cache akun lama
+      _loadCurrentUser();
 
       String? cleanToken = getToken();
       if (cleanToken == null) {
@@ -99,10 +140,6 @@ class ChatController extends GetxController {
         isLoading.value = false;
         return;
       }
-
-      print(
-        "📡 Menembak /room. Partner: ${partnerId.value}, Me: $currentUserId",
-      );
 
       final response = await http.post(
         Uri.parse("$baseUrl/api/chats/room"),
@@ -112,9 +149,6 @@ class ChatController extends GetxController {
         },
         body: jsonEncode({"receiver_id": partnerId.value}),
       );
-
-      print("📡 Status Buat Room: ${response.statusCode}");
-      print("📄 Respon Buat Room: ${response.body}");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -147,8 +181,6 @@ class ChatController extends GetxController {
       String? cleanToken = getToken();
       if (cleanToken == null) return;
 
-      print("📥 Mengambil riwayat pesan Room ID: ${chatRoomId.value}");
-
       final response = await http.get(
         Uri.parse("$baseUrl/api/chats/rooms/${chatRoomId.value}/messages"),
         headers: {"Authorization": "Bearer $cleanToken"},
@@ -158,6 +190,7 @@ class ChatController extends GetxController {
         final List<dynamic> rawList = jsonDecode(response.body);
         _parseAndSetMessages(rawList);
         _scrollToBottom();
+        refreshActiveRooms();
       }
       isLoading.value = false;
     } catch (e) {
@@ -166,6 +199,7 @@ class ChatController extends GetxController {
     }
   }
 
+  // 🟢 POLLING SILENT: Update list pesan tanpa memicu loading screen
   Future<void> _silentFetchMessages() async {
     try {
       String? cleanToken = getToken();
@@ -178,6 +212,8 @@ class ChatController extends GetxController {
 
       if (response.statusCode == 200) {
         final List<dynamic> rawList = jsonDecode(response.body);
+
+        // Hanya update & scroll kalau jumlah pesan di DB terbukti berubah!
         if (rawList.length != messages.length) {
           _parseAndSetMessages(rawList);
           _scrollToBottom();
@@ -188,7 +224,7 @@ class ChatController extends GetxController {
     }
   }
 
-  // 🟢 PEMBERSIHAN TOTAL: Bebas dari jeratan eror .min() jahanam
+  // 🟢 PENGONDISIAN DATA REAKTIF
   void _parseAndSetMessages(List<dynamic> rawList) {
     List<Map<String, dynamic>> parsed = rawList.map((msg) {
       bool isMe = msg['sender_id'] == currentUserId;
@@ -200,9 +236,11 @@ class ChatController extends GetxController {
         'isMe': isMe,
         'sender_id': msg['sender_id'],
         'time': _formatIsoTime(msg['created_at']),
+        'is_read': msg['is_read'] ?? false,
       };
     }).toList();
 
+    // 🔥 PERBAIKAN: Pastikan sinkron dengan properti reverse: true di ListView UI lu
     messages.assignAll(parsed.reversed.toList());
   }
 
@@ -233,8 +271,14 @@ class ChatController extends GetxController {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        messageController.clear();
-        await fetchChatHistory();
+        // 🔥 SOLUSI SAKTI: Beri jeda mikro 50ms agar keyboard OS selesai merender layout,
+        // Baru setelah itu data inputan dipastikan terhapus bersih secara steril!
+        Future.delayed(const Duration(milliseconds: 50), () {
+          messageController.clear();
+        });
+
+        // Tetap jalankan penarikan history secara asinkron
+        fetchChatHistory();
       }
       isSending.value = false;
     } catch (e) {
@@ -248,7 +292,7 @@ class ChatController extends GetxController {
       if (scrollController.hasClients) {
         scrollController.animateTo(
           0,
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
         );
       }
@@ -272,7 +316,7 @@ class ChatController extends GetxController {
 
   @override
   void onClose() {
-    _pollingTimer?.cancel();
+    _pollingTimer?.cancel(); // Wajib dimatikan demi keawetan baterai HP
     messageController.dispose();
     scrollController.dispose();
     super.onClose();

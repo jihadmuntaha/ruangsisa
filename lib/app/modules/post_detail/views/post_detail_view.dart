@@ -42,7 +42,7 @@ class PostDetailView extends StatelessWidget {
                         child: Image.network(
                           post['images'].startsWith('http')
                               ? post['images']
-                              : 'http://172.24.243.45:8000${post['images']}',
+                              : 'http://10.20.166.45:8000${post['images']}',
                           height: 300,
                           width: double.infinity,
                           fit: BoxFit.cover,
