@@ -201,13 +201,16 @@ class ChatView extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
+                              // 🟢 GANTI BLOK TEXT JAM DI TRAILING LISTTILE LU MENJADI SEPERTI INI:
                               Text(
-                                room['updated_at'] != null
+                                room['updated_at'] != null &&
+                                        room['updated_at'].toString().length >=
+                                            16
                                     ? room['updated_at'].toString().substring(
                                         11,
                                         16,
                                       )
-                                    : "12:30",
+                                    : "00:00", // Fallback aman murni kalau data string-nya kosong/null
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: hasUnread
@@ -293,34 +296,48 @@ class ChatView extends StatelessWidget {
               },
             ),
             title: Obx(() {
-              // 🟢 AMBIL DATA AVATAR SECARA REAKTIF DARI CONTROLLER
+              // 🟢 AMBIL DATA AVATAR & NAMA SECARA REAKTIF & AMAN DARI CONTROLLER
               final String partnerAvatar = controller.partnerAvatar.value;
+              final String currentPartnerName = controller.partnerName.value;
 
               return Row(
                 children: [
                   CircleAvatar(
                     backgroundColor: const Color(0xFF2D6A4F),
                     radius: 18,
-                    // 📸 JALUR STABIL: Deteksi link Google Auth atau File Lokal Backend
-                    backgroundImage: partnerAvatar.isNotEmpty
-                        ? NetworkImage(
-                            partnerAvatar.startsWith('http')
-                                ? partnerAvatar
-                                : 'http://10.20.166.45:8000$partnerAvatar',
+                    child: partnerAvatar.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: Image.network(
+                              partnerAvatar.startsWith('http')
+                                  ? partnerAvatar
+                                  : 'http://10.20.166.45:8000$partnerAvatar',
+                              fit: BoxFit.cover,
+                              width: 36,
+                              height: 36,
+                              // 🟢 JIKA BACKEND 404 / ERROR, AUTOMATIC FALLBACK KE ICON ORANG
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                  size: 20,
+                                );
+                              },
+                            ),
                           )
-                        : null,
-                    child: partnerAvatar.isEmpty
-                        ? const Icon(
+                        : const Icon(
                             Icons.person,
                             color: Colors.white,
                             size: 20,
-                          )
-                        : null,
+                          ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      controller.partnerName.value,
+                      // 🟢 FIX SAKTI: Jika nama kosong (dari notif), kasih fallback "Kontributor RuangSisa"
+                      currentPartnerName.isEmpty
+                          ? "Kontributor RuangSisa"
+                          : currentPartnerName,
                       style: const TextStyle(
                         color: Colors.black,
                         fontSize: 16,

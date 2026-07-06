@@ -44,22 +44,37 @@ class ProfileView extends StatelessWidget {
                   onTap: () => _showAvatarPickerSheet(context, controller),
                   child: Stack(
                     children: [
-                      Obx(
-                        () => CircleAvatar(
+                      Obx(() {
+                        String avatarPath = controller.avatarUrl.value;
+                        String? finalAvatarUrl;
+
+                        if (avatarPath.isNotEmpty) {
+                          if (avatarPath.startsWith('http')) {
+                            finalAvatarUrl = avatarPath;
+                          } else if (avatarPath.startsWith('/static/')) {
+                            // 🟢 KUNCI FIX: Jika string sudah rapi membawa /static/, tinggal tempel baseUrl
+                            finalAvatarUrl = "${controller.baseUrl}$avatarPath";
+                          } else {
+                            finalAvatarUrl =
+                                "${controller.baseUrl}/static/avatars/$avatarPath";
+                          }
+                        }
+
+                        return CircleAvatar(
                           radius: 40,
                           backgroundColor: const Color(0xFF2D6A4F),
-                          backgroundImage: controller.avatarUrl.value.isNotEmpty
-                              ? NetworkImage(controller.avatarUrl.value)
+                          backgroundImage: finalAvatarUrl != null
+                              ? NetworkImage(finalAvatarUrl)
                               : null,
-                          child: controller.avatarUrl.value.isEmpty
+                          child: finalAvatarUrl == null
                               ? const Icon(
                                   Icons.person,
                                   size: 40,
                                   color: Colors.white,
                                 )
                               : null,
-                        ),
-                      ),
+                        );
+                      }),
                       Positioned(
                         bottom: 0,
                         right: 0,

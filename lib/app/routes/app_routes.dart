@@ -19,6 +19,7 @@ abstract class Routes {
   static const FACE_SCAN = _Paths.FACE_SCAN;
   static const ACTIVITY_LOG = _Paths.ACTIVITY_LOG;
   static const NOTIFICATION = _Paths.NOTIFICATION;
+  static const CONTRIBUTOR_PROFILE = _Paths.CONTRIBUTOR_PROFILE;
 }
 
 abstract class _Paths {
@@ -39,4 +40,5 @@ abstract class _Paths {
   static const FACE_SCAN = '/face-scan';
   static const ACTIVITY_LOG = '/activity-log';
   static const NOTIFICATION = '/notification';
+  static const CONTRIBUTOR_PROFILE = '/contributor-profile';
 }

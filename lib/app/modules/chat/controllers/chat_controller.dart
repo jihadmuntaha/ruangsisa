@@ -51,54 +51,59 @@ class ChatController extends GetxController {
     print("📱 CHAT CONTROLLER INIT");
     print("Current User ID: $currentUserId");
 
-    // 🟢 SUNTIKAN PENGAMAN TOTAL TERHADAP TRAGEDI NULL CHECK OPERATOR
+    // 🟢 SUNTIKAN PENGAMAN MUTLAK DAN KEBAL CRASH NULL OPERATOR
     if (Get.arguments != null && Get.arguments is Map) {
       print("📦 Arguments received: ${Get.arguments}");
       final Map<String, dynamic> args = Map<String, dynamic>.from(
         Get.arguments,
       );
 
-      // 🎯 1. JALUR KLIK NOTIFIKASI (`chat_id`)
-      if (args.containsKey('chat_id') && args['chat_id'] != null) {
-        final String rawChatId = args['chat_id'].toString();
+      // 🎯 1. JALUR KLIK NOTIFIKASI ATAU LIST CHAT UTAMA YANG MEMBAWA 'chat_id' ATAU 'chat_room_id'
+      if (args.containsKey('chat_id') || args.containsKey('chat_room_id')) {
+        final String rawChatId = (args['chat_id'] ?? args['chat_room_id'])
+            .toString();
         chatRoomId.value = int.tryParse(rawChatId) ?? 0;
-        print(
-          "🔔 [NOTIF CLICK] Berhasil masuk via Notifikasi! Room ID: ${chatRoomId.value}",
-        );
 
-        // 🟢 GEBREG SEMUA PROPERTI BIAR VIEW LU KAGAK KELAPARAN DATA NULL SAMA SEKALI!
-        partnerId.value =
-            999; // Set di atas 0 agar 'if (controller.partnerId.value == 0)' di View lu gak kepicu!
-        partnerName.value = args['name']?.toString() ?? "Kontributor RuangSisa";
-        partnerImage.value = "";
-        partnerAvatar.value = "";
+        print("🔔 [JALUR ROOM INDEKS] Masuk Room ID: ${chatRoomId.value}");
 
-        // Kosongkan pesan lama dulu biar gak crash pas rendering awal
+        // Ambil fallback data nama aman dari payload notifikasi jika ada
+        final String notifPartnerName =
+            args['name']?.toString() ?? "Kontributor RuangSisa";
+        final int targetUserId =
+            int.tryParse(args['user_id']?.toString() ?? "0") ?? 999;
+
+        // Set state awal agar UI aman dari jebakan null check di View
+        partnerId.value = targetUserId;
+        partnerName.value = notifPartnerName;
+        partnerAvatar.value = args['avatar']?.toString() ?? "";
+        partnerImage.value = args['avatar']?.toString() ?? "";
+
+        // Kosongkan pesan lama dulu biar layout gak kaget saat render awal
         messages.clear();
 
         if (chatRoomId.value > 0) {
           fetchChatHistory();
+          // 🔥 PELURU SAKTI: Tarik profil nama partner asli dari server agar namanya tidak "Kontributor RuangSisa" terus!
+          _fetchAndSetPartnerProfileFromRoom();
         }
       }
-      // 🎯 2. JALUR KLIK DARI UI BIASA (Alur lama lu yang super aman)
-      else {
-        final int targetUserId = args['user_id'] ?? 0;
-        final String targetName = args['name'] ?? 'Kontributor';
-        final int? existingRoomId = args['chat_room_id'];
+      // 🎯 2. JALUR BARU PENGUNJUNG LAPAK (Belum ada Room ID, baru ada target User ID)
+      else if (args.containsKey('user_id')) {
+        final int targetUserId = int.tryParse(args['user_id'].toString()) ?? 0;
+        final String targetName = args['name']?.toString() ?? 'Kontributor';
 
         setChatPartner(targetUserId, targetName);
+        partnerAvatar.value = args['avatar']?.toString() ?? "";
+        partnerImage.value = args['avatar']?.toString() ?? "";
+        messages.clear();
 
-        if (existingRoomId != null && existingRoomId > 0) {
-          chatRoomId.value = existingRoomId;
-          print("✅ Menggunakan Room ID lama: $existingRoomId");
-          fetchChatHistory();
-        }
+        initiateChatRoom();
       }
     } else {
       print("⚠️ Get.arguments murni null atau bukan berupa Map!");
     }
 
-    // Polling aktif tiap 2 detik
+    // Polling aktif tiap 2 detik demi stabilitas sinkronisasi pesan
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (chatRoomId.value != 0 && !isLoading.value) {
         _silentFetchMessages();
@@ -224,23 +229,73 @@ class ChatController extends GetxController {
     }
   }
 
+  // 🔥 FUNGSI AUTOMATION: Mengambil data nama & avatar partner asli dari daftar room backend jika masuk via notif
+  Future<void> _fetchAndSetPartnerProfileFromRoom() async {
+    try {
+      String? cleanToken = getToken();
+      if (cleanToken == null) return;
+
+      final response = await http.get(
+        Uri.parse("$baseUrl/api/chats/rooms"),
+        headers: {"Authorization": "Bearer $cleanToken"},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> rooms = jsonDecode(response.body);
+        // Cari room yang ID-nya cocok dengan chatRoomId kita sekarang
+        final activeRoom = rooms.firstWhere(
+          (r) => (r['id'] ?? 0) == chatRoomId.value,
+          orElse: () => null,
+        );
+
+        if (activeRoom != null && activeRoom['receiver'] != null) {
+          final receiver = activeRoom['receiver'];
+          partnerId.value = receiver['id'] ?? partnerId.value;
+          partnerName.value = receiver['name']?.toString() ?? partnerName.value;
+          partnerAvatar.value = receiver['avatar']?.toString() ?? "";
+          partnerImage.value = receiver['avatar']?.toString() ?? "";
+          print(
+            "🎯 [PROFILE SYNC SUCCESS] Nama partner terupdate otomatis: ${partnerName.value}",
+          );
+        }
+      }
+    } catch (e) {
+      print("[-] Gagal auto-sync profil partner dari list room: $e");
+    }
+  }
+
   // 🟢 PENGONDISIAN DATA REAKTIF
   void _parseAndSetMessages(List<dynamic> rawList) {
     List<Map<String, dynamic>> parsed = rawList.map((msg) {
       bool isMe = msg['sender_id'] == currentUserId;
       String contentText = msg['message_text'] ?? '';
 
+      // 🟢 PARSING TIMESTAMP ASLI DARI BACKEND
+      DateTime parsedDate;
+      if (msg['created_at'] != null) {
+        try {
+          parsedDate = DateTime.parse(msg['created_at'].toString()).toLocal();
+        } catch (_) {
+          parsedDate = DateTime.now();
+        }
+      } else {
+        parsedDate = DateTime.now();
+      }
+
       return {
         'id': msg['id'],
         'content': contentText,
         'isMe': isMe,
         'sender_id': msg['sender_id'],
-        'time': _formatIsoTime(msg['created_at']),
+        'time':
+            '${parsedDate.hour.toString().padLeft(2, '0')}:${parsedDate.minute.toString().padLeft(2, '0')}',
+        'timestamp':
+            parsedDate, // 🌟 Suntik objek DateTime murni buat filter hari di UI
         'is_read': msg['is_read'] ?? false,
       };
     }).toList();
 
-    // 🔥 PERBAIKAN: Pastikan sinkron dengan properti reverse: true di ListView UI lu
+    // Pastikan sinkron dengan properti reverse: true di ListView UI lu
     messages.assignAll(parsed.reversed.toList());
   }
 
@@ -297,21 +352,6 @@ class ChatController extends GetxController {
         );
       }
     });
-  }
-
-  String _formatIsoTime(String? isoString) {
-    if (isoString == null) return _getCurrentTime();
-    try {
-      DateTime dt = DateTime.parse(isoString).toLocal();
-      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return _getCurrentTime();
-    }
-  }
-
-  String _getCurrentTime() {
-    final now = DateTime.now();
-    return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
   }
 
   @override
