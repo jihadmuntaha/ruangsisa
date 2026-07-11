@@ -1,101 +1,71 @@
-import 'package:flutter/material.dart'; // ◄ 1. FIXED: Ganti ke material.dart biar Color & Snackbar aman
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:ruang_sisa/app_config.dart';
 
 class AuthProvider extends GetConnect {
-  // 🟢 2. FIXED: Satukan kiblat alamat IP laptop lu ke satu variabel global provider
-  final String baseUrlAuth = "http://10.20.166.45:8000/auth";
+  final String baseUrlAuth = AppConfig.baseUrl;
 
   @override
   void onInit() {
     super.onInit();
+    baseUrl =
+        null; // Biarkan null agar tidak merusak rute bawaan Google Login lu
 
-    // Set default baseUrl bawaan GetConnect biar panggil rutenya gak usah ditulis panjang lagi
-    baseUrl = baseUrlAuth;
+    httpClient.timeout = const Duration(seconds: 10);
 
-    // ✅ INTERCEPTOR UNTUK SEMUA REQUEST (Suntik Token Otomatis)
     httpClient.addRequestModifier<dynamic>((request) async {
-      final box = GetStorage();
-      final token = box.read(
-        'access_token',
-      ); // Gak perlu pake 'await' untuk GetStorage biasa
+      final String fullUrl = request.url.toString();
 
+      if (fullUrl.contains('auth/google') ||
+          fullUrl.contains('auth/login') ||
+          fullUrl.contains('auth/register')) {
+        print("🔓 [INTERCEPTOR] Rute Publik Lolos Tanpa Token: $fullUrl");
+        return request;
+      }
+
+      final box = GetStorage();
+      final token = box.read('access_token');
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
-        print("🔑 [INTERCEPTOR] Token Bearer otomatis disuntikkan ke header");
       }
       return request;
     });
-
-    // ✅ RESPONSE INTERCEPTOR UNTUK HANDLE 401 (Auto Logout)
-    // Di AuthProvider - tambahkan di response interceptor
-    httpClient.addResponseModifier((request, response) {
-      if (response.statusCode == 401) {
-        print("⚠️ [INTERCEPTOR] Token expired atau tidak valid!");
-
-        // Coba refresh token atau logout
-        final box = GetStorage();
-        final refreshToken = box.read('refresh_token');
-
-        if (refreshToken != null) {
-          // Coba refresh token (jika ada endpoint refresh)
-          // _refreshToken(refreshToken);
-        } else {
-          // Logout otomatis
-          _handleLogout();
-        }
-      }
-      return response;
-    });
   }
 
-  void _handleLogout() async {
-    final box = GetStorage();
-    await box.remove('access_token');
-    await box.remove('user');
-    await box.remove('user_data');
-
-    Get.offAllNamed('/login');
-    Get.snackbar(
-      "Sesi Habis",
-      "Silakan login kembali",
-      backgroundColor: const Color.fromARGB(255, 220, 53, 69),
-      colorText: const Color.fromARGB(255, 255, 255, 255),
-    );
-  }
-
-  // 📡 =============== ENDPOINT ROUTER PIPELINES ===============
+  // 📡 =============== ENDPOINT ROUTER MANDIRI & SAH ===============
+  // Disesuaikan murni tanpa /api sesuai bukti nyata log Vercel lu!
 
   Future<Response> registerUser(Map<String, dynamic> data) {
-    return post('$baseUrlAuth/register', data);
+    print("📡 [REGISTER] Menembak ke jalur sah: $baseUrlAuth/auth/register");
+    return post('$baseUrlAuth/auth/register', data); // 🟢 Hapus /api, Beh!
   }
 
   Future<Response> loginUser(Map<String, dynamic> data) {
-    return post('$baseUrlAuth/login', data);
+    print("📡 [LOGIN] Menembak ke jalur sah: $baseUrlAuth/auth/login");
+    return post('$baseUrlAuth/auth/login', data); // 🟢 Hapus /api, Beh!
   }
 
   Future<Response> loginWithGoogleProvider(Map<String, dynamic> data) async {
-    final response = await post('$baseUrlAuth/google', data);
-    print("📡 [GOOGLE PROVIDER] STATUS: ${response.statusCode}");
-    print("📡 [GOOGLE PROVIDER] BODY: ${response.body}");
-    return response;
+    print("📡 [PROVIDER GOOGLE] Menembak ke Google...");
+    return await post(
+      '$baseUrlAuth/auth/google',
+      data,
+    ); // 🟢 Tetap utuh bawaan lu
   }
 
-  // 🟢 FIXED TOTAL: Buang semua variabel URL lengkap, CUKUP BUNTUTNYA DOANG!
   Future<Response> verifyOtpProvider(Map<String, dynamic> payload) async {
-    print("📡 [PROVIDER OTP] Menembak rute murni ke: $baseUrl/verify-otp");
-    return await post(
-      '/verify-otp',
-      payload,
-    ); // ◄ HANYA TULIS INI, JANGAN DIUBAH!
+    print(
+      "📡 [OTP VERIFY] Menembak murni ke rute sah: $baseUrlAuth/auth/verify-otp",
+    );
+    // 🟢 SINKRON MURNI: Mengarah langsung ke @router.post("/verify-otp") Python lu
+    return await post('$baseUrlAuth/auth/verify-otp', payload);
   }
 
-  // 🔥 FIXED TOTAL: Untuk kirim ulang juga sama, cukup buntutnya
   Future<Response> resendOtpProvider(Map<String, dynamic> payload) async {
-    print("📡 [PROVIDER OTP] Minta kirim ulang murni ke: $baseUrl/resend-otp");
-    return await post(
-      '/resend-otp',
-      payload,
-    ); // ◄ HANYA TULIS INI, JANGAN DIUBAH!
+    print(
+      "📡 [OTP RESEND] Menembak murni ke rute sah: $baseUrlAuth/auth/resend-otp",
+    );
+    // 🟢 SINKRON MURNI: Mengarah langsung ke @router.post("/resend-otp") Python lu
+    return await post('$baseUrlAuth/auth/resend-otp', payload);
   }
 }

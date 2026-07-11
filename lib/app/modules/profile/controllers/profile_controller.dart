@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ruang_sisa/app/data/providers/post_provider.dart';
+import 'package:ruang_sisa/app_config.dart';
 
 class ProfileController extends GetxController {
   final box = GetStorage();
@@ -12,7 +13,7 @@ class ProfileController extends GetxController {
   final ImagePicker _picker = ImagePicker();
 
   // 📡 IP SAKRAL BACKEND (Gunakan basis HTTP Connect GetX bawaan proyek lu)
-  final String baseUrl = "http://10.20.166.45:8000";
+  final String baseUrl = AppConfig.baseUrl;
 
   // 👤 State Informasi Akun
   var name = "".obs;
@@ -377,6 +378,10 @@ class ProfileController extends GetxController {
       isActionLoading(false);
     }
   }
+
+  // ===================================================================
+  // 5. DAFTAR / LOGIN INSTAN BIOMETRIK WAJAH (FACE ID)
+  
 
   // ===================================================================
   // 🚪 Aksi Keluar Akun (Clear Session)

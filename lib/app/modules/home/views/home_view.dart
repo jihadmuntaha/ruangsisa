@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:ruang_sisa/app_config.dart';
 import '../controllers/home_controller.dart';
 
 class HomeView extends StatelessWidget {
@@ -8,9 +9,7 @@ class HomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final HomeController controller = Get.put(HomeController());
-
-    // 🟢 SINKRON: Base URL murni mengarah ke IP laptop aktif lu saat ini
-    final String baseUrl = "http://10.20.166.45:8000";
+    final String baseUrl = AppConfig.baseUrl;
 
     final List<Map<String, dynamic>> categories = [
       {'id': null, 'name': 'Semua', 'icon': Icons.grid_view},
@@ -55,7 +54,6 @@ class HomeView extends StatelessWidget {
                     Get.toNamed('/notification');
                   },
                 ),
-                // Jika ada notifikasi yang belum dibaca, munculkan lingkaran merah penanda jumlahnya
                 if (controller.unreadCount.value > 0)
                   Positioned(
                     right: 6,
@@ -183,6 +181,7 @@ class HomeView extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final post = controller.postsList[index];
 
+                    // 1. Tentukan nama pemilik postingan
                     String ownerName = "User RuangSisa";
                     if (post['author'] != null) {
                       if (post['author']['name'] != null) {
@@ -193,39 +192,69 @@ class HomeView extends StatelessWidget {
                       ownerName = post['user']['name'];
                     }
 
-                    String labelTombol = 'Ambil';
-                    if (post['post_type'] == 'Barter') labelTombol = 'Tawarkan';
-                    if (post['post_type'] == 'Dijual') labelTombol = 'Beli';
+                    // 🟢 2. DETEKSI AMAN 3 STATUS (Gak bakal disatukan atau tertukar lagi, Beh!)
+                    final String rawPrice = (post['price'] ?? '').toString();
+                    final bool isBarterByWishlist =
+                        post['barter_wishlist'] != null &&
+                        post['barter_wishlist'].toString().trim().isNotEmpty;
+                    final bool isBarterByPrice =
+                        post['post_type'] == 'Dijual' &&
+                        (rawPrice == '0' || rawPrice == 'Rp 0');
 
-                    String? formatPrice;
-                    if (post['post_type'] == 'Dijual' &&
-                        post['price'] != null) {
-                      formatPrice = 'Rp ${post['price']}';
+                    String tipeMurni = 'Donasi';
+                    String labelTombol = 'Ambil';
+                    String infoKontribusi = 'Gratis / Donasi';
+
+                    // 🔵 SEKAT MUTLAK A: JALUR BARTER
+                    if (isBarterByWishlist || isBarterByPrice) {
+                      tipeMurni = 'Barter';
+                      labelTombol =
+                          'Tawarkan'; // Tombol disesuaikan murni ke Barter
+
+                      String wishText =
+                          (post['barter_wishlist'] != null &&
+                              post['barter_wishlist'].toString().isNotEmpty)
+                          ? post['barter_wishlist'].toString()
+                          : 'Hubungi Pemilik';
+                      infoKontribusi = 'Tukar: $wishText';
+                    }
+                    // 🟠 SEKAT MUTLAK B: JALUR DIJUAL MURNI
+                    else if (post['post_type'] == 'Dijual') {
+                      tipeMurni = 'Dijual';
+                      labelTombol = 'Beli';
+                      infoKontribusi = post['price'] != null
+                          ? 'Rp ${post['price']}'
+                          : 'Rp 0';
+                    }
+                    // 🟢 SEKAT MUTLAK C: JALUR DONASI MURNI
+                    else {
+                      tipeMurni = 'Donasi';
+                      labelTombol = 'Ambil';
+                      infoKontribusi = 'Gratis / Donasi';
                     }
 
-                    // 🟢 PERBAIKAN: Rakit URL Gambar secara presisi & anti-double-slash
+                    // 🛠️ RAKIT URL GAMBAR POSTINGAN
                     String? finalImageUrl;
                     if (post['images'] != null &&
                         post['images'].toString().isNotEmpty) {
                       String imagePath = post['images'].toString();
-
-                      // Ambil murni nama filenya saja
-                      String cleanFileName = imagePath.split('/').last;
-
-                      // Ubah dari /uploads/ menjadi /static/uploads/ agar pas dengan FastAPI baru
-                      finalImageUrl = "$baseUrl/static/uploads/$cleanFileName";
+                      if (imagePath.startsWith('http')) {
+                        finalImageUrl = imagePath;
+                      } else {
+                        String cleanFileName = imagePath.split('/').last;
+                        finalImageUrl =
+                            "$baseUrl/static/uploads/$cleanFileName";
+                      }
                     }
 
+                    // 🛠️ RAKIT URL AVATAR PROFIL
                     String? finalAvatarUrl;
                     String? rawAvatar =
                         post['author']?['avatar'] ?? post['user']?['avatar'];
-
                     if (rawAvatar != null && rawAvatar.toString().isNotEmpty) {
-                      // Jika avatar adalah link Google (OAuth login), langsung pakai tanpa modifikasi
                       if (rawAvatar.startsWith('http')) {
                         finalAvatarUrl = rawAvatar;
                       } else {
-                        // Jika avatar berupa file lokal, bersihkan nama filenya dan arahkan ke static/uploads
                         String cleanAvatarName = rawAvatar.split('/').last;
                         finalAvatarUrl =
                             "$baseUrl/static/uploads/$cleanAvatarName";
@@ -242,16 +271,22 @@ class HomeView extends StatelessWidget {
                       child: FeedSosmedCard(
                         postId: post['id'],
                         name: ownerName,
-                        avatarUrl:
-                            finalAvatarUrl, // 🔥 Ganti pakai variabel finalAvatarUrl yang sudah steril!
-                        type: post['post_type'] ?? 'Donasi',
+                        avatarUrl: finalAvatarUrl,
+                        type:
+                            tipeMurni, // 🟢 Menyuntikkan 'Donasi' / 'Dijual' / 'Barter'
                         title: post['title'] ?? 'Tanpa Judul',
                         desc: post['description'] ?? '',
-                        price: formatPrice,
-                        btnLabel: labelTombol,
+                        price:
+                            infoKontribusi, // 🟢 Menyuntikkan nominal Rp / Teks Tukar Wishlist / Gratis
+                        btnLabel:
+                            labelTombol, // 🟢 Menyuntikkan teks tombol 'Ambil' / 'Beli' / 'Tawarkan'
                         imageUrl: finalImageUrl,
                         createdAt: post['created_at'] ?? '',
                         onChatPressed: () {
+                          // 🟢 OTOMATIS: Meluncur membawa ID pemilik postingan asli secara aman jaya
+                          print(
+                            "💬 [CHAT] Membuka obrolan $tipeMurni dengan $ownerName (User ID: ${post['user_id']})",
+                          );
                           Get.toNamed(
                             '/chat',
                             arguments: {
@@ -304,9 +339,7 @@ class FeedSosmedCard extends StatelessWidget {
 
   String formatTimeAgo(String? createdAtStr) {
     if (createdAtStr == null || createdAtStr.isEmpty) return 'Baru saja';
-
     try {
-      // Parsing string ISO dari backend (contoh: 2026-07-01T16:18:15)
       DateTime postTime = DateTime.parse(createdAtStr).toLocal();
       DateTime now = DateTime.now();
       Duration difference = now.difference(postTime);
@@ -320,7 +353,6 @@ class FeedSosmedCard extends StatelessWidget {
       } else if (difference.inDays < 7) {
         return '${difference.inDays} hari yang lalu';
       } else {
-        // Jika sudah lebih dari seminggu, tampilkan tanggal format biasa
         return '${postTime.day}/${postTime.month}/${postTime.year}';
       }
     } catch (e) {
@@ -330,14 +362,16 @@ class FeedSosmedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 🟢 PEMISAHAN WARNA BADGE KATEGORI SECARA TEGAS INDEPENDEN
     Color badgeColor = const Color(0xFFE8FFF0);
     Color textColor = const Color(0xFF0F5238);
+
     if (type == 'Barter') {
-      badgeColor = const Color(0xFFE0F2FE);
-      textColor = const Color(0xFF0369A1);
+      badgeColor = const Color(0xFFE0F2FE); // Biru muda kalem mumpuni
+      textColor = const Color(0xFF0369A1); // Biru pekat
     } else if (type == 'Dijual') {
-      badgeColor = const Color(0xFFFEF3C7);
-      textColor = const Color(0xFFB45309);
+      badgeColor = const Color(0xFFFEF3C7); // Kuning emas bawaan lu
+      textColor = const Color(0xFFB45309); // Coklat jingga
     }
 
     return Container(
@@ -347,7 +381,6 @@ class FeedSosmedCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ListTile(
-            // 🟢 SEKALIAN AVATARNYA MUNCUL DI SINI
             leading: CircleAvatar(
               backgroundColor: const Color(0xFF2D6A4F),
               backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty
@@ -361,7 +394,6 @@ class FeedSosmedCard extends StatelessWidget {
               name,
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
-            // 🟢 UBAH SUBTITLE MENJADI FORMAT DINAMIS SAKTI
             subtitle: Text(
               formatTimeAgo(createdAt),
               style: const TextStyle(fontSize: 11, color: Colors.grey),
@@ -373,7 +405,7 @@ class FeedSosmedCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                type,
+                type, // 🟢 MENYESUAIKAN TYPE POST: Donasi / Dijual / Barter
                 style: TextStyle(
                   color: textColor,
                   fontWeight: FontWeight.bold,
@@ -444,11 +476,13 @@ class FeedSosmedCard extends StatelessWidget {
               children: [
                 if (price != null) ...[
                   Text(
-                    price!,
-                    style: const TextStyle(
+                    price!, // 🟢 MENYESUAIKAN DATA BAWAHAN: nominal harga / wishlist / gratis
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D6A4F),
+                      color: type == 'Barter'
+                          ? const Color(0xFF0369A1)
+                          : const Color(0xFF2D6A4F),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -524,7 +558,7 @@ class FeedSosmedCard extends StatelessWidget {
                         color: Colors.white,
                       ),
                       label: Text(
-                        btnLabel,
+                        btnLabel, // 🟢 MENYESUAIKAN AKSI: Ambil / Beli / Tawarkan
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,

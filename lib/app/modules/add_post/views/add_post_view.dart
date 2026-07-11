@@ -122,7 +122,7 @@ class AddPostView extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // 🏷️ JENIS KONTRIBUSI (Donasi / Dijual)
+            // 🏷️ JENIS KONTRIBUSI (Donasi / Dijual / Barter)
             const Text(
               'Jenis Kontribusi',
               style: TextStyle(
@@ -144,7 +144,10 @@ class AddPostView extends StatelessWidget {
                   items: const [
                     DropdownMenuItem(value: 'donation', child: Text('Donasi')),
                     DropdownMenuItem(value: 'sale', child: Text('Dijual')),
-                    DropdownMenuItem(value: 'barter', child: Text('Barter')),
+                    DropdownMenuItem(
+                      value: 'barter',
+                      child: Text('Barter'),
+                    ), // 🟢 Opsi Barter Resmi Mengudara
                   ],
                   onChanged: (value) {
                     if (value != null) {
@@ -156,7 +159,7 @@ class AddPostView extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // 🆕 DROPDOWN KATEGORI (PILIHAN, BUKAN INPUT TEXT!)
+            // 🆕 DROPDOWN KATEGORI
             const Text(
               'Kategori Barang',
               style: TextStyle(
@@ -173,7 +176,6 @@ class AddPostView extends StatelessWidget {
               ),
               child: DropdownButtonHideUnderline(
                 child: Obx(() {
-                  // Tampilkan loading kalau kategori belum ke-load
                   if (controller.categories.isEmpty) {
                     return const Center(
                       child: Padding(
@@ -195,7 +197,7 @@ class AddPostView extends StatelessWidget {
                             Icon(
                               _getIconForCategory(category['name']),
                               size: 20,
-                              color: Color(0xFF2D6A4F),
+                              color: const Color(0xFF2D6A4F),
                             ),
                             const SizedBox(width: 10),
                             Text(category['name']),
@@ -261,62 +263,93 @@ class AddPostView extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // FIELD DINAMIS (HARGA untuk SALE)
-            if (controller.selectedType.value == 'sale') ...[
-              const Text(
-                'Harga (Rp)',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF002114),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: controller.priceController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: 'Masukkan harga, misal: 50000',
-                  fillColor: Colors.white,
-                  filled: true,
-                  prefixText: 'Rp ',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
+            // 🟢 2. FIXED: FIELD DINAMIS HARGA (Hanya muncul pas dipilih 'Dijual')
+            Obx(
+              () => controller.selectedType.value == 'sale'
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Harga (Rp)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF002114),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: controller.priceController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            hintText: 'Masukkan harga, misal: 50000',
+                            fillColor: Colors.white,
+                            filled: true,
+                            prefixText: 'Rp ',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+            ),
+
+            // 🟢 3. FIXED: FIELD DINAMIS WISHLIST BARTER (Hanya muncul pas dipilih 'Barter')
+            Obx(
+              () => controller.selectedType.value == 'barter'
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Mau Ditukar Dengan Apa, Beh? (Wishlist)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF002114),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: controller.wishlistController,
+                          decoration: InputDecoration(
+                            hintText:
+                                'Misal: Benang rajut warna ijo, kain perca wol',
+                            fillColor: Colors.white,
+                            filled: true,
+                            prefixIcon: const Icon(
+                              Icons.swap_horizontal_circle,
+                              color: Color(0xFF2D6A4F),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+            ),
 
             // TOMBOL POST
-            Obx(
-              () => ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2D6A4F),
-                  minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2D6A4F),
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                onPressed: controller.isLoading.value
-                    ? null
-                    : () => controller.submitPost(),
-                child: controller.isLoading.value
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text(
-                        'Post Material Sisa',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+              ),
+              onPressed: () => controller.submitPost(),
+              child: const Text(
+                'Post Material Sisa',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],

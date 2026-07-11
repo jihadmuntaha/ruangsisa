@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../controllers/chat_controller.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:ruang_sisa/app_config.dart'; // 🟢 1. PASTIKAN IMPORT APPCONFIG MASUK KE VIEW
 
 class ChatView extends StatelessWidget {
   const ChatView({super.key});
@@ -52,7 +53,6 @@ class ChatView extends StatelessWidget {
             backgroundColor: Colors.white,
             elevation: 0.5,
           ),
-          // 🔄 RefreshIndicator tetep dipertahankan buat opsional manual user
           body: RefreshIndicator(
             color: const Color(0xFF2D6A4F),
             backgroundColor: Colors.white,
@@ -61,8 +61,6 @@ class ChatView extends StatelessWidget {
               await Future.delayed(const Duration(milliseconds: 600));
             },
             child: FutureBuilder<List<dynamic>>(
-              // 🔥 TRIK SAKTI 1: Ikat langsung ke refreshTrigger.value & controller.messages.length
-              // Biar setiap ada pesan masuk/keluar di background, Kotak Masuk OTOMATIS meletup ke-refresh sendiri!
               future:
                   (controller.refreshTrigger.value >= 0 ||
                       controller.messages.length >= 0)
@@ -93,7 +91,7 @@ class ChatView extends StatelessWidget {
                             ),
                             const SizedBox(height: 16),
                             const Text(
-                              'Belum Ada Chat Hack Aktif',
+                              'Belum Ada Chat Aktif',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -155,16 +153,14 @@ class ChatView extends StatelessWidget {
                           backgroundColor: hasUnread
                               ? const Color(0xFF1B4332)
                               : const Color(0xFF2D6A4F),
-                          // 🟢 TINGGAL PANGGIL VARIABELNYA DI SINI, JIHAD!
-                          // Cek apakah ada link gambar/avatar dari backend
+                          // 🟢 PERBAIKAN SAKTI 1: Gunakan ${AppConfig.baseUrl} dengan benar
                           backgroundImage: partnerImage.isNotEmpty
                               ? NetworkImage(
                                   partnerImage.startsWith('http')
                                       ? partnerImage
-                                      : 'http://10.20.166.45:8000$partnerImage', // Auto-suntik IP lokal laptop
+                                      : '${AppConfig.baseUrl}$partnerImage',
                                 )
                               : null,
-                          // Kalau string gambarnya kosong, baru tampilin Icon default orang (Icons.person)
                           child: partnerImage.isEmpty
                               ? const Icon(Icons.person, color: Colors.white)
                               : null,
@@ -201,7 +197,6 @@ class ChatView extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              // 🟢 GANTI BLOK TEXT JAM DI TRAILING LISTTILE LU MENJADI SEPERTI INI:
                               Text(
                                 room['updated_at'] != null &&
                                         room['updated_at'].toString().length >=
@@ -210,7 +205,7 @@ class ChatView extends StatelessWidget {
                                         11,
                                         16,
                                       )
-                                    : "00:00", // Fallback aman murni kalau data string-nya kosong/null
+                                    : "00:00",
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: hasUnread
@@ -275,12 +270,11 @@ class ChatView extends StatelessWidget {
       // ✉️ KONDISI B: DETAIL ISI CHAT PERORANGAN (BUBBLE CHAT)
       // =======================================================================
       return WillPopScope(
-        // 🟢 CEGAH TOMBOL BACK FISIK HP KELUAR DARI APLIKASI
         onWillPop: () async {
           controller.partnerId.value = 0;
           controller.chatRoomId.value = 0;
           controller.refreshActiveRooms();
-          return false; // Membatalkan aksi pop bawaan OS, dialihkan ke perubahan state internal
+          return false;
         },
         child: Scaffold(
           backgroundColor: const Color(0xFFF3F4F6),
@@ -296,7 +290,6 @@ class ChatView extends StatelessWidget {
               },
             ),
             title: Obx(() {
-              // 🟢 AMBIL DATA AVATAR & NAMA SECARA REAKTIF & AMAN DARI CONTROLLER
               final String partnerAvatar = controller.partnerAvatar.value;
               final String currentPartnerName = controller.partnerName.value;
 
@@ -309,13 +302,13 @@ class ChatView extends StatelessWidget {
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(18),
                             child: Image.network(
+                              // 🟢 PERBAIKAN SAKTI 2: Gunakan ${AppConfig.baseUrl} murni agar tidak crash Uri
                               partnerAvatar.startsWith('http')
                                   ? partnerAvatar
-                                  : 'http://10.20.166.45:8000$partnerAvatar',
+                                  : '${AppConfig.baseUrl}$partnerAvatar',
                               fit: BoxFit.cover,
                               width: 36,
                               height: 36,
-                              // 🟢 JIKA BACKEND 404 / ERROR, AUTOMATIC FALLBACK KE ICON ORANG
                               errorBuilder: (context, error, stackTrace) {
                                 return const Icon(
                                   Icons.person,
@@ -334,7 +327,6 @@ class ChatView extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      // 🟢 FIX SAKTI: Jika nama kosong (dari notif), kasih fallback "Kontributor RuangSisa"
                       currentPartnerName.isEmpty
                           ? "Kontributor RuangSisa"
                           : currentPartnerName,

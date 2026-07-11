@@ -20,6 +20,7 @@ abstract class Routes {
   static const ACTIVITY_LOG = _Paths.ACTIVITY_LOG;
   static const NOTIFICATION = _Paths.NOTIFICATION;
   static const CONTRIBUTOR_PROFILE = _Paths.CONTRIBUTOR_PROFILE;
+  static const EDIT_POST = _Paths.EDIT_POST;
 }
 
 abstract class _Paths {
@@ -41,4 +42,5 @@ abstract class _Paths {
   static const ACTIVITY_LOG = '/activity-log';
   static const NOTIFICATION = '/notification';
   static const CONTRIBUTOR_PROFILE = '/contributor-profile';
+  static const EDIT_POST = '/edit-post';
 }

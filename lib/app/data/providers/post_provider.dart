@@ -1,9 +1,10 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'dart:io';
+
+import 'package:ruang_sisa/app_config.dart';
 
 class PostProvider extends GetConnect {
-  final String baseUrlAddress = "http://10.20.166.45:8000/api";
+  final String baseUrlAddress = "${AppConfig.baseUrl}/api";
 
   @override
   void onInit() {
@@ -83,16 +84,16 @@ class PostProvider extends GetConnect {
       }
 
       // Buat FormData
+      // 🟢 UBAY PARADIGMA: Kirim string URL, bukan file fisik lagi!
       var formData = FormData({
         'title': fields['title'] ?? '',
         'description': fields['description'] ?? '',
         'user_id': fields['user_id'] ?? '',
         'post_type': fields['post_type'] ?? '',
         'category_id': fields['category_id'] ?? '',
-        'image': MultipartFile(
-          File(imagePath).readAsBytesSync(),
-          filename: 'image.jpg',
-        ),
+
+        // 🟢 Ganti 'image' MultipartFile menjadi field string 'image_url' biasa
+        'image_url': imagePath,
       });
 
       // Tambah field opsional

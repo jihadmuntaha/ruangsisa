@@ -1,10 +1,11 @@
 import 'dart:io';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:ruang_sisa/app_config.dart';
 
 class ProfileProvider extends GetConnect {
   final box = GetStorage();
-  final String baseUrl = "http://10.20.166.45:8000";
+  final String baseUrl = AppConfig.baseUrl;
 
   // Header sakral dengan Bearer Token
   Map<String, String> _getHeaders() {

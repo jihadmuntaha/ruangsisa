@@ -6,7 +6,7 @@ import '../../../data/providers/auth_provider.dart';
 import '../../../data/services/notification_service.dart';
 
 class LoginController extends GetxController {
-  final AuthProvider _authProvider = AuthProvider();
+  final AuthProvider _authProvider = Get.put(AuthProvider());
 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();

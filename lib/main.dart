@@ -2,9 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:camera/camera.dart';
-import 'package:firebase_core/firebase_core.dart'; // ◄ Tambah import ini
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // 🟢 1. TAMBAH IMPORT LOCAL NOTIF INI
 import 'app/routes/app_pages.dart';
-import 'app/data/services/notification_service.dart'; // ◄ Tambah import service baru lu
+import 'app/data/services/notification_service.dart';
+
+// 🟢 2. CONFIG CHANNEL SAKTI: Set importance ke max agar Android maksa nampilin banner pop-up
+const AndroidNotificationChannel channel = AndroidNotificationChannel(
+  'ruangsisa_high_channel', // ◄ Kunci ID Channel (Bebas, tapi catat ini buat backend nanti!)
+  'Notifikasi Penting RuangSisa',
+  description:
+      'Channel ini digunakan untuk meletupkan notifikasi chat, like, dan komen secara real-time.',
+  importance: Importance.max,
+  playSound: true,
+  enableVibration: true,
+);
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 List<CameraDescription> cameras = [];
 
@@ -14,10 +29,20 @@ void main() async {
   // 1. Inisialisasi GetStorage
   await GetStorage.init();
 
-  // 2. 🟢 SUNTIKKAN INI: Jalankan Firebase murni sebelum aplikasi start
+  // 2. Inisialisasi Firebase & Notification Channel
   try {
     await Firebase.initializeApp();
-    // Jalankan Notification Service GetX
+
+    // 🟢 3. DAFTARKAN CHANNEL KE SISTEM OPERASI ANDROID
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(channel);
+
+    print("🔔 [FCM CHANNEL] Android Notification Channel sukses terdaftar!");
+
+    // Jalankan Notification Service GetX lu
     await Get.putAsync(() => NotificationService().init());
   } catch (e) {
     print("🚨 [FIREBASE INIT ERROR] Gagal inisialisasi Firebase: $e");

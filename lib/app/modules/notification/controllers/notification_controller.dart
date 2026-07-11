@@ -2,79 +2,130 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:ruang_sisa/app/routes/app_pages.dart';
+import 'package:ruang_sisa/app_config.dart';
+import '../../../data/providers/notification_provider.dart';
 
 class NotificationController extends GetxController {
   var notifications = <Map<String, dynamic>>[].obs;
   var isLoading = false.obs;
 
+  // Tetap sediakan untuk method PUT/DELETE internal controller
   final GetConnect _connect = GetConnect();
-  final String baseUrl = 'http://10.20.166.45:8000/api';
+  final String baseUrl = '${AppConfig.baseUrl}/api';
+
+  // 1. Inisialisasi Provider secara rapi
+  final notificationProvider = Get.put(NotificationProvider());
 
   @override
   void onInit() {
     super.onInit();
-    _initForegroundNotificationSettings(); // 🟢 1. AKTIFKAN OPSI PRESENTASI OS ANDROID
+    _initForegroundNotificationSettings();
     fetchNotifications();
     _listenIncomingFcm();
   }
 
-  // 🟢 FUNGSI BARU: Paksa OS Android biar tetep ngijinin banner & suara masuk walau aplikasi lagi dibuka
   void _initForegroundNotificationSettings() async {
     try {
       await FirebaseMessaging.instance
           .setForegroundNotificationPresentationOptions(
-            alert: true, // Heads-up banner tetep nongol di atas layar
-            badge: true, // Counter angka di icon HP terupdate
-            sound: true, // Suara notif tetep bunyi nyaring
+            alert: true,
+            badge: true,
+            sound: true,
           );
     } catch (e) {
       print("⚠️ Gagal set foreground presentation options: $e");
     }
   }
 
+  // 🛠️ FUNGSI REFRESH / AMBIL NOTIFIKASI YANG SUDAH DIREPARASI TOTAL
   void fetchNotifications() async {
     try {
       isLoading.value = true;
       final box = GetStorage();
       final tokenAuth = box.read('token');
 
-      if (tokenAuth != null) {
-        final response = await _connect.get(
-          '$baseUrl/notifications',
-          headers: {'Authorization': 'Bearer $tokenAuth'},
-        );
+      if (tokenAuth == null) {
+        print("⚠️ [GET NOTIF] Token kosong, batal memuat.");
+        return;
+      }
 
-        if (response.statusCode == 200 && response.body != null) {
-          if (response.body is List) {
-            final List<dynamic> data = response.body;
-            notifications.assignAll(
-              data.map((item) => Map<String, dynamic>.from(item)).toList(),
-            );
-          }
-        } else {
+      print("📡 FE sedang memicu penarikan riwayat notifikasi via Provider...");
+      final response = await notificationProvider.getMyNotifications();
+
+      // 🟢 PEMBENARAN SAKLI: Cek properti statusCode murni untuk deteksi timeout/jaringan terputus
+      if (response.statusCode == null) {
+        print(
+          "🚨 [GET NOTIF ERROR] Server Vercel drop atau GetConnect mengalami masalah jabat tangan SSL!",
+        );
+        return;
+      }
+
+      if (response.statusCode == 200 && response.body != null) {
+        if (response.body is List) {
+          final List<dynamic> data = response.body;
+
+          // Mencegah error tipe data sewaktu parsing
+          notifications.assignAll(
+            data.map((item) {
+              final mapItem = Map<String, dynamic>.from(item);
+
+              // 🟢 PENGAMAN ZONA WAKTU MUTLAK:
+              // Jika dari backend sudah mengirim string waktu (misal: created_at),
+              // langsung konversi ke waktu lokal HP saat dimasukkan ke memori RX.
+              if (mapItem['created_at'] != null) {
+                try {
+                  DateTime utcTime = DateTime.parse(
+                    mapItem['created_at'].toString(),
+                  );
+                  // .toLocal() otomatis mengubah UTC jam server ke WIB jam HP lu
+                  mapItem['time_display'] = utcTime
+                      .toLocal()
+                      .toString()
+                      .substring(11, 16);
+                } catch (_) {
+                  mapItem['time_display'] = "Baru saja";
+                }
+              } else {
+                mapItem['time_display'] = mapItem['time'] ?? "Baru saja";
+              }
+
+              return mapItem;
+            }).toList(),
+          );
+
           print(
-            "⚠️ [GET NOTIF] Gagal memuat dari server: ${response.statusCode}",
+            "✅ Berhasil memuat ${notifications.length} riwayat notifikasi dari DB SQLite Cloud!",
           );
         }
+      } else {
+        print(
+          "⚠️ [GET NOTIF] Ditolak Server. Status: ${response.statusCode} | Body: ${response.body}",
+        );
       }
     } catch (e) {
-      print("❌ Error fetch notifications: $e");
+      print("❌ Error fetch notifications di Controller: $e");
     } finally {
       isLoading.value = false;
     }
   }
 
-  // 2. 🟢 LISTENER REAL-TIME DENGAN AUTO HEADS-UP POP UP BANNER
   void _listenIncomingFcm() {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final notification = message.notification;
       if (notification != null) {
+        // Ambil jam sekarang murni dari jam internal HP lu
+        final now = DateTime.now();
+        final String formattedLocalTime =
+            "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+
         final Map<String, dynamic> newNotif = {
           "id":
               message.messageId ??
               DateTime.now().millisecondsSinceEpoch.toString(),
           "title": notification.title ?? "Pesan Baru",
           "body": notification.body ?? "",
+          "time_display": formattedLocalTime, // Jam lokal instan
           "time": "Just now",
           "is_read": "false",
           "type": message.data['type']?.toString(),
@@ -84,17 +135,13 @@ class NotificationController extends GetxController {
               "1",
         };
 
-        // 1. Masukkan ke tumpukan list halaman notifikasi
         notifications.insert(0, newNotif);
 
-        // 2. 🔥 JURUS UTAMA: Letupkan Banner Pop-Up WhatsApp Style secara Real-Time pakai GetX!
         Get.snackbar(
           notification.title ?? "📩 Pesan Baru",
           notification.body ?? "Cek aplikasi RuangSisa sekarang, Beh!",
           snackPosition: SnackPosition.TOP,
-          backgroundColor: const Color(
-            0xFF1B4332,
-          ), // Hijau tua berkelas RuangSisa
+          backgroundColor: const Color(0xFF1B4332),
           colorText: Colors.white,
           borderRadius: 12,
           margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -103,7 +150,6 @@ class NotificationController extends GetxController {
           shouldIconPulse: true,
           barBlur: 10,
           dismissDirection: DismissDirection.horizontal,
-          // 🎯 BISA DI-TAP LANGSUNG: Kalau banner-nya di-klik pas melayang, otomatis langsung lompat ke room chat!
           onTap: (_) {
             onNotificationTap(0, newNotif);
           },
@@ -112,41 +158,35 @@ class NotificationController extends GetxController {
     });
   }
 
-  // 3. 🟢 FUNGSI KLIK DINAMIS: DIJAMIN 100% BEBAS DARI NULL CHECK OPERATOR CRASH!
   void onNotificationTap(int index, Map<String, dynamic>? notif) {
-    // 1. Validasi awal jika objek notif murni null
     if (notif == null) {
       print("⚠️ [NAVIGASI SKIP] Data notifikasi murni null.");
       return;
     }
 
     print("🎯 [LIST NOTIF CLICK] Mengolah aksi klik untuk: $notif");
-
-    // 2. Amankan ID Notifikasi secara null-safe tanpa tanda seru kaku
     String notifId = (notif['id'] ?? DateTime.now().millisecondsSinceEpoch)
         .toString();
 
-    // Amankan pengecekan index sebelum panggil markAsRead
     if (notifications.isNotEmpty && index < notifications.length) {
       markAsRead(index, notifId);
     }
 
-    // 3. Amankan data tipe dan reference secara null-safe murni
     String type = notif['type']?.toString() ?? '';
     String referenceId = notif['reference_id']?.toString() ?? '';
 
     if (referenceId.isEmpty || referenceId == "null") {
       print(
-        "⚠️ [NAVIGASI SKIP] Reference ID kosong murni, navigasi spesifik dibatalkan.",
+        "⚠️ [NAVIGASI SKIP] Reference ID kosong murni, navigasi dibatalkan.",
       );
       return;
     }
 
-    // 🎯 ALUR A: KLIK NOTIFIKASI CHAT (Lompat ke Room Chat bawa data chat_id)
     if (type == 'chat') {
-      print("➡️ [NAVIGASI CHAT] Meluncur murni ke Room Chat ID: $referenceId");
+      print(
+        "➡️ [NAVIGASI CHAT] Meluncur aman lewat jalur User ID, ID: $referenceId",
+      );
 
-      // Ekstrak nama partner secara aman untuk dioper ke ChatController
       String cleanName =
           notif['title']
               ?.toString()
@@ -155,12 +195,14 @@ class NotificationController extends GetxController {
           'Kontributor RuangSisa';
 
       Get.toNamed(
-        '/chat-room',
-        arguments: {'chat_id': referenceId, 'name': cleanName},
+        Routes.CHAT,
+        arguments: {
+          'user_id': referenceId,
+          'name': cleanName,
+          'avatar': notif['avatar'] ?? "",
+        },
       );
-    }
-    // 🎯 ALUR B: KLIK NOTIFIKASI KOMENTAR (Lompat ke Detail Postingan bawa data post_id)
-    else if (type == 'comment') {
+    } else if (type == 'comment') {
       print(
         "➡️ [NAVIGASI KOMENTAR] Meluncur murni ke Detail Postingan ID: $referenceId",
       );
@@ -170,7 +212,6 @@ class NotificationController extends GetxController {
 
   void markAsRead(int index, String notifId) async {
     try {
-      // Validasi indeks array secara ketat agar tidak memicu Out of Bounds / Null Exception
       if (notifications.isEmpty || index >= notifications.length) return;
 
       var updatedItem = Map<String, dynamic>.from(notifications[index]);

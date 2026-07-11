@@ -124,8 +124,9 @@ class NotificationView extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
+                      // Di dalam ListView item builder halaman notifikasi lu:
                       Text(
-                        item['time'] ?? '',
+                        item['time_display'] ?? "Baru saja",
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.grey[500],

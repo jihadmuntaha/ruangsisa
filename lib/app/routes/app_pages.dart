@@ -8,6 +8,8 @@ import '../modules/add_post/bindings/add_post_binding.dart';
 import '../modules/add_post/views/add_post_view.dart';
 import '../modules/contributor_profile/bindings/contributor_profile_binding.dart';
 import '../modules/contributor_profile/views/contributor_profile_view.dart';
+import '../modules/edit_post/bindings/edit_post_binding.dart';
+import '../modules/edit_post/views/edit_post_view.dart';
 import '../modules/forgot_password/bindings/forgot_password_binding.dart';
 import '../modules/forgot_password/views/forgot_password_view.dart';
 import '../modules/home/bindings/home_binding.dart';
@@ -116,6 +118,11 @@ class AppPages {
       name: _Paths.CONTRIBUTOR_PROFILE,
       page: () => const ContributorProfileView(),
       binding: ContributorProfileBinding(),
+    ),
+    GetPage(
+      name: _Paths.EDIT_POST,
+      page: () => const EditPostView(),
+      binding: EditPostBinding(),
     ),
   ];
 }

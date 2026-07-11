@@ -4,10 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:ruang_sisa/app_config.dart';
 
 class ChatController extends GetxController {
   // 🟢 IP Backend disamakan dengan log terminal FastAPI asli
-  final String baseUrl = "http://10.20.166.45:8000";
+  final String baseUrl = AppConfig.baseUrl;
 
   var messages = <Map<String, dynamic>>[].obs;
   var isLoading = false.obs;
@@ -58,7 +59,7 @@ class ChatController extends GetxController {
         Get.arguments,
       );
 
-      // 🎯 1. JALUR KLIK NOTIFIKASI ATAU LIST CHAT UTAMA YANG MEMBAWA 'chat_id' ATAU 'chat_room_id'
+      // 🎯 1. JALUR LIST CHAT UTAMA YANG MEMBAWA 'chat_id' ATAU 'chat_room_id'
       if (args.containsKey('chat_id') || args.containsKey('chat_room_id')) {
         final String rawChatId = (args['chat_id'] ?? args['chat_room_id'])
             .toString();
@@ -66,7 +67,7 @@ class ChatController extends GetxController {
 
         print("🔔 [JALUR ROOM INDEKS] Masuk Room ID: ${chatRoomId.value}");
 
-        // Ambil fallback data nama aman dari payload notifikasi jika ada
+        // Ambil fallback data nama aman dari payload list chat jika ada
         final String notifPartnerName =
             args['name']?.toString() ?? "Kontributor RuangSisa";
         final int targetUserId =
@@ -83,21 +84,30 @@ class ChatController extends GetxController {
 
         if (chatRoomId.value > 0) {
           fetchChatHistory();
-          // 🔥 PELURU SAKTI: Tarik profil nama partner asli dari server agar namanya tidak "Kontributor RuangSisa" terus!
+          // 🔥 PIL PILIHAN: Sinkronkan nama asli dari list room server
           _fetchAndSetPartnerProfileFromRoom();
         }
       }
-      // 🎯 2. JALUR BARU PENGUNJUNG LAPAK (Belum ada Room ID, baru ada target User ID)
-      else if (args.containsKey('user_id')) {
-        final int targetUserId = int.tryParse(args['user_id'].toString()) ?? 0;
-        final String targetName = args['name']?.toString() ?? 'Kontributor';
+      // 🎯 2. JALUR BARU PENGUNJUNG LAPAK ATAU JALUR NOTIFIKASI TERBARU (Membawa user_id / reference_id)
+      else if (args.containsKey('user_id') ||
+          args.containsKey('reference_id')) {
+        // 🟢 FIX SAKTI: Ambil ID penjual secara aman dari 'user_id' atau 'reference_id' pembawa payload FCM
+        final String rawUserId =
+            (args['user_id'] ?? args['reference_id'] ?? "0").toString();
+        final int targetUserId = int.tryParse(rawUserId) ?? 0;
+
+        final String targetName =
+            args['name']?.toString() ?? 'Kontributor RuangSisa';
 
         setChatPartner(targetUserId, targetName);
         partnerAvatar.value = args['avatar']?.toString() ?? "";
         partnerImage.value = args['avatar']?.toString() ?? "";
         messages.clear();
 
-        initiateChatRoom();
+        // Cari atau buat room otomatis ke backend jika target ID-nya valid
+        if (targetUserId > 0) {
+          initiateChatRoom();
+        }
       }
     } else {
       print("⚠️ Get.arguments murni null atau bukan berupa Map!");
@@ -186,8 +196,13 @@ class ChatController extends GetxController {
       String? cleanToken = getToken();
       if (cleanToken == null) return;
 
+      // 🟢 KUNCI FIX: Memastikan alamat endpoint berbunyi /api/chats/rooms/...
+      final String fullUrl =
+          "$baseUrl/api/chats/rooms/${chatRoomId.value}/messages";
+      print("📡 FE menembak history chat ke: $fullUrl");
+
       final response = await http.get(
-        Uri.parse("$baseUrl/api/chats/rooms/${chatRoomId.value}/messages"),
+        Uri.parse(fullUrl),
         headers: {"Authorization": "Bearer $cleanToken"},
       );
 
@@ -196,6 +211,10 @@ class ChatController extends GetxController {
         _parseAndSetMessages(rawList);
         _scrollToBottom();
         refreshActiveRooms();
+      } else {
+        print(
+          "⚠️ [GET CHAT] Server merespon status: ${response.statusCode} | Body: ${response.body}",
+        );
       }
       isLoading.value = false;
     } catch (e) {
@@ -204,14 +223,17 @@ class ChatController extends GetxController {
     }
   }
 
-  // 🟢 POLLING SILENT: Update list pesan tanpa memicu loading screen
+  // 🟢 POLLING SILENT: Update list pesan tanpa memicu loading screen (SUDAH DI-REPAIR)
   Future<void> _silentFetchMessages() async {
     try {
       String? cleanToken = getToken();
       if (cleanToken == null) return;
 
+      final String fullUrl =
+          "$baseUrl/api/chats/rooms/${chatRoomId.value}/messages";
+
       final response = await http.get(
-        Uri.parse("$baseUrl/api/chats/rooms/${chatRoomId.value}/messages"),
+        Uri.parse(fullUrl),
         headers: {"Authorization": "Bearer $cleanToken"},
       );
 

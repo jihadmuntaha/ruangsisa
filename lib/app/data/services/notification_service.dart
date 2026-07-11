@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:ruang_sisa/app_config.dart';
 
 // 🔥 TOP-LEVEL HANDLER: Wajib ada di luar class untuk menangani pesan saat aplikasi mati total/background
 @pragma('vm:entry-point')
@@ -81,7 +83,7 @@ class NotificationService extends GetxService {
             print("➡️ [NAVIGASI] Lompat langsung ke Room Chat ID: $chatId");
 
             // Pindah halaman dengan penanganan argument yang aman
-            Get.toNamed('/chat-room', arguments: {'chat_id': chatId});
+            Get.toNamed('/chat_room', arguments: {'chat_id': chatId});
             return; // 🛑 BERHENTI DI SINI MURNI!
           }
           // 🎯 B. JALUR NOTIFIKASI KOMENTAR
@@ -127,29 +129,44 @@ class NotificationService extends GetxService {
     return token;
   }
 
-  // Fungsi pembantu nembak API FastAPI laptop lu
+  // Fungsi pembantu nembak API FastAPI laptop lu (SUDAH DI-REPAIR TOTAL)
   Future<void> _updateTokenToBackend(String token) async {
     try {
       final box = GetStorage();
       final tokenAuth = box.read('token');
 
       if (tokenAuth != null) {
-        final response = await GetConnect().put(
-          'http://10.20.166.45:8000/api/users/fcm-token',
-          {'fcm_token': token},
-          headers: {'Authorization': 'Bearer $tokenAuth'},
+        final String apiUrl = '${AppConfig.baseUrl}/api/users/fcm-token';
+        print("📡 Menghubungkan token FCM ke Backend Vercel: $apiUrl");
+
+        // 🟢 MENGGUNAKAN HTTP CLIENT STANDARD AGAR REKONSILIASI HEADER LEBIH STABIL & PASTI TEMBUS
+        final response = await http.put(
+          Uri.parse(apiUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $tokenAuth',
+          },
+          body: jsonEncode({'fcm_token': token}),
         );
 
         if (response.statusCode == 200) {
-          print("✅ [FCM BACKEND] Token sukses disinkronkan ke DB SQLite!");
+          print(
+            "✅ [FCM BACKEND] Token sukses disinkronkan ke DB SQLite backend, Jihad!",
+          );
         } else {
           print(
-            "⚠️ [FCM BACKEND] Gagal sinkronisasi token: ${response.statusCode}",
+            "⚠️ [FCM BACKEND] Server merespon, tapi gagal simpan token. Status: ${response.statusCode} | Body: ${response.body}",
           );
         }
+      } else {
+        print(
+          "⚠️ [FCM BACKEND] Sinkronisasi ditunda karena user belum login (Token Auth null).",
+        );
       }
     } catch (e) {
-      print("🚨 [FCM BACKEND ERROR] Gagal menghubungkan token ke server: $e");
+      print(
+        "🚨 [FCM BACKEND ERROR] Gagal total menghubungkan token ke server: $e",
+      );
     }
   }
 
@@ -209,7 +226,7 @@ class NotificationService extends GetxService {
         print(
           "➡️ [NAVIGASI BACKGROUND] Langsung lompat ke Chat Room ID: $chatId",
         );
-        Get.toNamed('/chat-room', arguments: {'chat_id': chatId});
+        Get.toNamed('/chat_room', arguments: {'chat_id': chatId});
       }
       // 🎯 B. JALUR NOTIFIKASI KOMENTAR VIA BACKGROUND
       else if (type == 'comment' && message.data.containsKey('post_id')) {

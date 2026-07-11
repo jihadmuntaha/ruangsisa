@@ -39,7 +39,7 @@ class ProfileView extends StatelessWidget {
             ),
             child: Column(
               children: [
-                // 📸 1. FOTO PROFIL INTERAKTIF (Bisa diklik buat ganti foto pake kamera Realme)
+                // 📸 1. FOTO PROFIL INTERAKTIF
                 GestureDetector(
                   onTap: () => _showAvatarPickerSheet(context, controller),
                   child: Stack(
@@ -52,7 +52,6 @@ class ProfileView extends StatelessWidget {
                           if (avatarPath.startsWith('http')) {
                             finalAvatarUrl = avatarPath;
                           } else if (avatarPath.startsWith('/static/')) {
-                            // 🟢 KUNCI FIX: Jika string sudah rapi membawa /static/, tinggal tempel baseUrl
                             finalAvatarUrl = "${controller.baseUrl}$avatarPath";
                           } else {
                             finalAvatarUrl =
@@ -208,32 +207,31 @@ class ProfileView extends StatelessWidget {
               itemBuilder: (context, index) {
                 final item = controller.userContributions[index];
 
-                // 🟢 1. AMANKAN URL GAMBAR: Biar gambar barang kontribusi lu meletup keluar murni!
+                // 🟢 FIX PINTAR 1: Supaya list barang milik user otomatis deteksi link online Picsum
                 String? finalImageUrl;
                 if (item['images'] != null &&
                     item['images'].toString().isNotEmpty) {
                   String imagePath = item['images'].toString();
-                  String cleanFileName = imagePath.split('/').last;
-                  finalImageUrl =
-                      "${controller.baseUrl}/static/uploads/$cleanFileName";
-                  // Catatan: sesuaikan 'controller.baseUrl' atau 'baseUrl' dengan variabel IP lu ya!
+                  if (imagePath.startsWith('http')) {
+                    finalImageUrl = imagePath;
+                  } else {
+                    String cleanFileName = imagePath.split('/').last;
+                    finalImageUrl =
+                        "${controller.baseUrl}/static/uploads/$cleanFileName";
+                  }
                 }
 
-                // 🟢 2. BUNGKUS DENGAN GESTURE DETECTOR UNTUK NAVIGASI KE DETAIL
                 return GestureDetector(
                   onTap: () {
                     Get.toNamed(
                       '/post-detail',
-                      arguments: {
-                        'post_id': item['id'],
-                      }, // 🔥 Mengirim ID postingan kontribusi
+                      arguments: {'post_id': item['id']},
                     );
                   },
                   child: _buildMiniGrid(
                     item['title'] ?? '',
                     item['post_type'] ?? '',
-                    finalImageUrl ??
-                        item['images'], // 🔥 Gunakan URL gambar steril ber-IP
+                    finalImageUrl,
                   ),
                 );
               },
@@ -244,7 +242,6 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  // 🟢 INTERAKTIF: Modal pilih sumber foto profil
   void _showAvatarPickerSheet(
     BuildContext context,
     ProfileController controller,
@@ -257,7 +254,7 @@ class ProfileView extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.camera_alt, color: Color(0xFF2D6A4F)),
-              title: const Text('Ambil via Kamera HP Realme, Beh!'),
+              title: const Text('Ambil via Kamera HP, Beh!'),
               onTap: () {
                 Get.back();
                 controller.pickAndUploadAvatar(ImageSource.camera);
@@ -280,7 +277,7 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  // 🟢 FIX IP SAKRAL: Diselaraskan biar gambar postingan gak 404
+  // 🟢 FIX PINTAR 2: Blok MiniGrid yang sudah steril dari error syntax kurung tutup
   Widget _buildMiniGrid(String title, String status, String? imageName) {
     const String ipLaptop = "10.20.166.45";
     String? finalImageUrl;
@@ -288,8 +285,12 @@ class ProfileView extends StatelessWidget {
     if (imageName != null &&
         imageName.isNotEmpty &&
         imageName != 'foto_barang_default.png') {
-      String cleanFileName = imageName.split('/').last;
-      finalImageUrl = "http://$ipLaptop:8000/static/uploads/$cleanFileName";
+      if (imageName.startsWith('http')) {
+        finalImageUrl = imageName;
+      } else {
+        String cleanFileName = imageName.split('/').last;
+        finalImageUrl = "http://$ipLaptop:8000/static/uploads/$cleanFileName";
+      }
     }
 
     return Container(
@@ -391,13 +392,11 @@ class _StatItem extends StatelessWidget {
   }
 }
 
-// --- SUB-VIEW TAMBAHAN: EDIT PROFIL (FIXED & FULLY INTERACTIVE) ---
 class EditProfileView extends GetView<ProfileController> {
   const EditProfileView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Controller Text Lokal untuk menampung ketikan baru si user
     final nameCtrl = TextEditingController(text: controller.name.value);
     final bioCtrl = TextEditingController(text: controller.bio.value);
     final locationCtrl = TextEditingController(text: controller.location.value);
@@ -431,8 +430,6 @@ class EditProfileView extends GetView<ProfileController> {
           _buildField('Bio', bioCtrl),
           _buildField('Lokasi', locationCtrl),
           const SizedBox(height: 24),
-
-          // Tombol eksekusi simpan ke FastAPI database laptop lu, Beh!
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2D6A4F),
@@ -442,7 +439,7 @@ class EditProfileView extends GetView<ProfileController> {
               ),
             ),
             onPressed: () async {
-              Get.back(); // Kembali ke layar profil utama
+              Get.back();
               await controller.updateProfileData(
                 nameCtrl.text,
                 bioCtrl.text,
@@ -476,7 +473,6 @@ class EditProfileView extends GetView<ProfileController> {
   }
 }
 
-// --- SUB-VIEW TAMBAHAN: PENGATURAN ---
 class SettingsView extends GetView<ProfileController> {
   const SettingsView({super.key});
 
@@ -497,7 +493,6 @@ class SettingsView extends GetView<ProfileController> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         children: [
           _buildSectionTitle('Keamanan & Autentikasi'),
-
           ListTile(
             leading: const Icon(
               Icons.face_unlock_rounded,
@@ -522,8 +517,6 @@ class SettingsView extends GetView<ProfileController> {
             },
           ),
           const Divider(height: 1),
-
-          // 🟢 INTERAKTIF: Ditautkan ke modal popup ubah password murni
           ListTile(
             leading: const Icon(
               Icons.lock_outline_rounded,
@@ -537,7 +530,6 @@ class SettingsView extends GetView<ProfileController> {
             onTap: () => _showChangePasswordPopUp(),
           ),
           const Divider(height: 1),
-
           ListTile(
             leading: const Icon(
               Icons.history_toggle_off_rounded,
@@ -555,10 +547,8 @@ class SettingsView extends GetView<ProfileController> {
               Get.toNamed('/activity-log');
             },
           ),
-
           const SizedBox(height: 16),
           _buildSectionTitle('Aplikasi & Notifikasi'),
-
           ListTile(
             leading: const Icon(
               Icons.notifications_outlined,
@@ -581,9 +571,7 @@ class SettingsView extends GetView<ProfileController> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () {},
           ),
-
           const SizedBox(height: 32),
-
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: ListTile(
@@ -608,7 +596,6 @@ class SettingsView extends GetView<ProfileController> {
     );
   }
 
-  // 🟢 INTERAKTIF: Dialog popup ganti password bawaan GetX
   void _showChangePasswordPopUp() {
     final oldPassCtrl = TextEditingController();
     final newPassCtrl = TextEditingController();

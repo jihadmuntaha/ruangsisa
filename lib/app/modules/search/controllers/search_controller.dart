@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:ruang_sisa/app_config.dart';
 
 class SearchController extends GetxController {
-  final String baseUrl = "http://10.20.166.45:8000";
+  final String baseUrl = AppConfig.baseUrl;
 
   var searchResults = <Map<String, dynamic>>[].obs; // Penampung postingan
   var userResults = <Map<String, dynamic>>[].obs; // 🟢 Penampung user baru

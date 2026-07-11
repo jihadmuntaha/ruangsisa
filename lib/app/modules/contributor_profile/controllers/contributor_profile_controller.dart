@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:ruang_sisa/app_config.dart';
 
 class ContributorProfileController extends GetxController {
-  final String baseUrl = "http://10.20.166.45:8000";
+  final String baseUrl = AppConfig.baseUrl;
 
   var isLoading = false.obs;
   var contributorName = ''.obs;

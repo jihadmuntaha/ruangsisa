@@ -98,6 +98,8 @@ class HomeController extends GetxController {
     }
   }
 
+  
+
   // 🟢 5. SINKRONKAN PADA METHOD REFRESH DATA
   Future<void> refreshData() async {
     await fetchTimelinePosts();

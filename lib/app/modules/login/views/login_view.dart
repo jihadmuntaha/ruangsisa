@@ -131,12 +131,15 @@ class LoginView extends GetView<LoginController> {
                               ),
                               TextButton(
                                 onPressed: () {
-                                  // Navigasi ke lupa password
+                                  // 🟢 TERBANG KE HALAMAN KHUSUS LU: Langsung arahkan ke view 3-step yang lu buat
+                                  Get.toNamed('/forgot-password');
                                 },
                                 child: const Text(
                                   'Lupa Password?',
                                   style: TextStyle(
-                                    color: Color(0xFF2D6A4F),
+                                    color: Color(
+                                      0xFF2D6A4F,
+                                    ), // Warna hijau khas RuangSisa lu
                                     fontWeight: FontWeight.w600,
                                     fontSize: 12,
                                   ),
@@ -410,7 +413,8 @@ class LoginView extends GetView<LoginController> {
         ),
         const SizedBox(height: 6),
         TextField(
-          controller: textController,
+          // 🟢 KUNCI TOBAT: Diarahkan tegas ke emailController milik LoginController lewat GetView
+          controller: controller.emailController,
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
           style: const TextStyle(fontSize: 14),

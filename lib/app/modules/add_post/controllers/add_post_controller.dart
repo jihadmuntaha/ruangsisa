@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../data/providers/post_provider.dart';
 
 class AddPostController extends GetxController {
@@ -16,18 +18,34 @@ class AddPostController extends GetxController {
 
   var selectedImagePath = ''.obs;
   var selectedImageFile = Rx<XFile?>(null);
+
+  // 🟢 1. LIST OPSI DROPDOWN UI
   var selectedType = 'donation'.obs;
-  final List<String> postTypes = ['donation', 'sale'];
+  final List<String> postTypes = ['donation', 'sale', 'barter'];
 
   var selectedCategoryId = 0.obs;
   var categories = <Map<String, dynamic>>[].obs;
 
   final ImagePicker _picker = ImagePicker();
 
+  final String supabaseUrl = "https://tiylfogifxcrrylgiqyr.supabase.co";
+  final String supabaseAnonKey =
+      "sb_publishable_jueDhJ7zMcCAPfKuGOse1A_-Svrt6jF";
+
   @override
   void onInit() {
     super.onInit();
+    _initSupabase();
     fetchCategories();
+  }
+
+  void _initSupabase() async {
+    try {
+      await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+      print("🛡️ Supabase Storage Service Berhasil Connect!");
+    } catch (e) {
+      print("ℹ️ Supabase Info/Status: $e");
+    }
   }
 
   Future<void> fetchCategories() async {
@@ -74,12 +92,14 @@ class AddPostController extends GetxController {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
-        imageQuality: 80,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 70,
       );
       if (image != null) {
         selectedImagePath.value = image.path;
         selectedImageFile.value = image;
-        Get.snackbar("Sukses", "Gambar berhasil diambil");
+        Get.snackbar("Sukses", "Gambar berhasil diambil & dioptimasi");
       }
     } catch (e) {
       Get.snackbar("Error", "Gagal mengambil gambar");
@@ -90,12 +110,14 @@ class AddPostController extends GetxController {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 80,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 70,
       );
       if (image != null) {
         selectedImagePath.value = image.path;
         selectedImageFile.value = image;
-        Get.snackbar("Sukses", "Gambar berhasil dipilih");
+        Get.snackbar("Sukses", "Gambar berhasil dipilih & dioptimasi");
       }
     } catch (e) {
       Get.snackbar("Error", "Gagal memilih gambar");
@@ -108,7 +130,6 @@ class AddPostController extends GetxController {
   }
 
   Future<void> submitPost() async {
-    // Validasi
     if (titleController.text.isEmpty) {
       Get.snackbar("Error", "Judul tidak boleh kosong");
       return;
@@ -125,8 +146,13 @@ class AddPostController extends GetxController {
       Get.snackbar("Error", "Silakan pilih kategori");
       return;
     }
+
     if (selectedType.value == 'sale' && priceController.text.isEmpty) {
-      Get.snackbar("Error", "Harga tidak boleh kosong");
+      Get.snackbar("Error", "Harga tidak boleh kosong untuk opsi Dijual, Beh!");
+      return;
+    }
+    if (selectedType.value == 'barter' && wishlistController.text.isEmpty) {
+      Get.snackbar("Error", "Kolom barang penukar (wishlist) wajib diisi!");
       return;
     }
 
@@ -141,43 +167,65 @@ class AddPostController extends GetxController {
         throw Exception("User tidak ditemukan");
       }
 
-      // Konversi post_type
+      print("🚀 Memulai proses upload foto asli ke Supabase Storage...");
+      File fileFisik = File(selectedImagePath.value);
+
+      String rawFileName = selectedImagePath.value.split('/').last;
+      String uniqueFileName =
+          "${DateTime.now().millisecondsSinceEpoch}_$rawFileName";
+
+      await Supabase.instance.client.storage
+          .from('posts')
+          .upload(uniqueFileName, fileFisik);
+
+      String publicImageUrl = Supabase.instance.client.storage
+          .from('posts')
+          .getPublicUrl(uniqueFileName);
+
+      print("🟢 URL Publik Berhasil Didapat: $publicImageUrl");
+
+      // 🟢 2. STRATEGI TITIP DATA AMAN JAYA (Gak bakalan bikin API Vercel lu Eror 422/500):
+      // Kita kembalikan kiblat post_type sistem database backend lu murni ke 'Donasi' atau 'Dijual'.
+      // Biar 'Barter' diidentifikasi secara pintar di HomeView via 'barter_wishlist'!
       String postTypeValue = selectedType.value == 'donation'
           ? 'Donasi'
           : 'Dijual';
 
-      // ✅ Buat Map untuk fields
       Map<String, String> fields = {
         'title': titleController.text,
         'description': descController.text,
         'user_id': userId.toString(),
         'post_type': postTypeValue,
         'category_id': selectedCategoryId.value.toString(),
+        'image_url': publicImageUrl,
       };
 
+      // 🟢 3. FIX PAYLOAD ANTI-NULL:
       if (selectedType.value == 'sale' && priceController.text.isNotEmpty) {
         fields['price'] = priceController.text;
       }
-      if (selectedType.value == 'donation' &&
-          wishlistController.text.isNotEmpty) {
-        fields['barter_wishlist'] = wishlistController.text;
+
+      // Jika user memilih Barter, paksa harganya "0" dan oper isi ketikan wishlist-nya murni ke database!
+      if (selectedType.value == 'barter') {
+        fields['price'] = "0";
+        if (wishlistController.text.isNotEmpty) {
+          fields['barter_wishlist'] = wishlistController
+              .text; // ◄ Kunci Utama biar di DB gak masuk NULL!
+        }
       }
 
-      print("📝 Fields: $fields");
-      print("📸 Image path: ${selectedImagePath.value}");
+      print("📝 Fields mumpuni yang dikirim ke Vercel: $fields");
 
-      // ✅ Panggil API dengan fields dan image path
-      final response = await _postProvider.createPost(
-        fields,
-        selectedImagePath.value,
-      );
-
+      final response = await _postProvider.createPost(fields, publicImageUrl);
       isLoading.value = false;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         _clearForm();
         Get.back(result: true);
-        Get.snackbar("Sukses", "Postingan berhasil ditambahkan!");
+        Get.snackbar(
+          "Sukses 🎉",
+          "Postingan kain perca mumpuni berhasil mengudara!",
+        );
       } else {
         String errorMsg =
             response.body?['detail'] ?? "Gagal menambahkan postingan";
@@ -205,8 +253,11 @@ class AddPostController extends GetxController {
 
   void changePostType(String type) {
     selectedType.value = type;
-    if (type == 'donation') {
+    if (type == 'donation' || type == 'barter') {
       priceController.clear();
+    }
+    if (type != 'barter') {
+      wishlistController.clear();
     }
   }
 

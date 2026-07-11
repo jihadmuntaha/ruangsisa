@@ -1,122 +1,224 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:ruang_sisa/app_config.dart';
 
 class ForgotPasswordController extends GetxController {
-  // Controller untuk menangkap input teks
-  late TextEditingController emailController;
-  late TextEditingController otpController;
-  late TextEditingController newPasswordController;
-  late TextEditingController confirmPasswordController;
-
-  // Status Loading indikator
+  // --- STATE & UTILLITIES ---
+  var currentStep = 1.obs;
   var isLoading = false.obs;
 
-  // Melacak tahapan form saat ini: 1 = Input Email, 2 = Input OTP, 3 = Input Password Baru
-  var currentStep = 1.obs;
+  // --- TEXT CONTROLLERS ---
+  final emailController = TextEditingController();
+  final otpController = TextEditingController();
+  final newPasswordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
 
-  @override
-  void onInit() {
-    super.onInit();
-    emailController = TextEditingController();
-    otpController = TextEditingController();
-    newPasswordController = TextEditingController();
-    confirmPasswordController = TextEditingController();
-  }
+  // --- API BASE URL ---
+  final String baseUrl = AppConfig.baseUrl;
 
-  @override
-  void onClose() {
-    emailController.dispose();
-    otpController.dispose();
-    newPasswordController.dispose();
-    confirmPasswordController.dispose();
-    super.onClose();
-  }
-
-  // ================= TAHAP 1: KIRIM OTP =================
+  // ================= TAHAP 1: KIRIM OTP EMAIL =================
   void sendOtpEmail() async {
     final email = emailController.text.trim();
 
     if (email.isEmpty || !GetUtils.isEmail(email)) {
-      Get.snackbar('Input Tidak Valid', 'Silakan masukkan alamat email yang benar.',
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        "Validasi Gagal ❌",
+        "Masukkan alamat email yang valid, Beh!",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
       return;
     }
 
     try {
       isLoading.value = true;
-      // TODO: Hubungkan dengan API backend RuangSisa untuk generate & kirim OTP
-      await Future.delayed(const Duration(seconds: 2)); 
+
+      final response = await http.post(
+        Uri.parse("$baseUrl/api/auth/forgot-password/request"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email}),
+      );
+
       isLoading.value = false;
 
-      Get.snackbar('OTP Dikirim', 'Kode verifikasi telah dikirim ke email $email.',
-          snackPosition: SnackPosition.BOTTOM);
-      
-      // Pindah ke tahap verifikasi OTP
-      currentStep.value = 2;
+      if (response.statusCode == 200) {
+        Get.snackbar(
+          "OTP Terkirim 📩",
+          "Kode OTP berhasil dikirim ke email $email.",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+        currentStep.value = 2;
+      } else {
+        final data = jsonDecode(response.body);
+        // 🟢 AMAN: Tambahkan .toString() agar tidak memicu type mismatch
+        Get.snackbar(
+          "Gagal ❌",
+          data['detail']?.toString() ??
+              data['message']?.toString() ??
+              "Gagal mengirim OTP.",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
     } catch (e) {
       isLoading.value = false;
-      Get.snackbar('Error', 'Gagal mengirim OTP.', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        "Error ❌",
+        "Tidak dapat terhubung ke server backend.",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
   }
 
-  // ================= TAHAP 2: VERIFIKASI OTP =================
+  // ================= TAHAP 2: VERIFIKASI KODE OTP =================
   void verifyOtp() async {
-    // final otp = otpController.text.trim();
+    final email = emailController.text.trim();
+    final otp = otpController.text.trim();
 
-    // if (otp.isEmpty || otp.length < 4) { // Asumsi kode OTP 4-6 digit
-    //   Get.snackbar('OTP Salah', 'Silakan masukkan kode OTP yang valid.',
-    //       snackPosition: SnackPosition.BOTTOM);
-    //   return;
-    // }
+    if (otp.isEmpty || otp.length < 4) {
+      Get.snackbar(
+        "Validasi Gagal ❌",
+        "Kode OTP wajib diisi lengkap!",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
 
     try {
       isLoading.value = true;
-      // TODO: Hubungkan dengan API backend untuk validasi kecocokan kode OTP
-      await Future.delayed(const Duration(seconds: 2));
+
+      final response = await http.post(
+        Uri.parse("$baseUrl/api/auth/forgot-password/verify"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email, "otp": otp}),
+      );
+
       isLoading.value = false;
 
-      Get.snackbar('Verifikasi Sukses', 'Kode OTP cocok. Silakan atur kata sandi baru.',
-          snackPosition: SnackPosition.BOTTOM);
-      
-      // Pindah ke tahap ganti password baru
-      currentStep.value = 3;
+      if (response.statusCode == 200) {
+        Get.snackbar(
+          "Verifikasi Sukses 🎉",
+          "Kode OTP valid. Silakan atur kata sandi baru Anda.",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+        currentStep.value = 3;
+      } else {
+        final data = jsonDecode(response.body);
+        // 🟢 AMAN: Tambahkan .toString() agar tidak memicu type mismatch
+        Get.snackbar(
+          "OTP Salah ❌",
+          data['detail']?.toString() ?? "Kode OTP tidak valid/kedaluwarsa.",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
     } catch (e) {
       isLoading.value = false;
-      Get.snackbar('Error', 'Kode OTP tidak cocok atau kadaluwarsa.', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        "Error ❌",
+        "Gagal memverifikasi OTP ke server.",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
   }
 
-  // ================= TAHAP 3: PERBARUI PASSWORD =================
+  // ================= TAHAP 3: UPDATE PASSWORD BARU =================
   void updatePassword() async {
-    final newPass = newPasswordController.text;
-    final confirmPass = confirmPasswordController.text;
+    final email = emailController.text.trim();
+    final otp = otpController.text.trim();
+    final newPassword = newPasswordController.text;
+    final confirmPassword = confirmPasswordController.text;
 
-    if (newPass.isEmpty || newPass.length < 8) {
-      Get.snackbar('Sandi Lemah', 'Kata sandi minimal harus 8 karakter.',
-          snackPosition: SnackPosition.BOTTOM);
+    if (newPassword.isEmpty || confirmPassword.isEmpty) {
+      Get.snackbar(
+        "Validasi Gagal ❌",
+        "Kedua kolom kata sandi wajib diisi!",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
       return;
     }
 
-    if (newPass != confirmPass) {
-      Get.snackbar('Tidak Cocok', 'Konfirmasi kata sandi tidak sama.',
-          snackPosition: SnackPosition.BOTTOM);
+    if (newPassword.length < 8) {
+      Get.snackbar(
+        "Validasi Gagal ❌",
+        "Kata sandi baru minimal harus 8 karakter!",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    if (newPassword != confirmPassword) {
+      Get.snackbar(
+        "Mismatched ❌",
+        "Konfirmasi kata sandi tidak cocok!",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
       return;
     }
 
     try {
       isLoading.value = true;
-      // TODO: Hubungkan dengan API backend untuk menyimpan kata sandi baru ke database
-      await Future.delayed(const Duration(seconds: 2));
+
+      final response = await http.post(
+        Uri.parse("$baseUrl/api/auth/forgot-password/reset"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "email": email,
+          "otp": otp,
+          "new_password": newPassword,
+        }),
+      );
+
       isLoading.value = false;
 
-      Get.snackbar('Sukses', 'Kata sandi berhasil diperbarui! Silakan masuk kembali.',
-          snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 3));
+      if (response.statusCode == 200) {
+        // Tutup keyboard bawaan biar gak ganjal animasi transisi
+        FocusManager.instance.primaryFocus?.unfocus();
 
-      // Kembalikan pengguna langsung ke layar login
-      Future.delayed(const Duration(seconds: 3), () => Get.back());
+        // 🟢 AMAN & STERIL: Langsung tendang ke login, gak usah panggil _resetForm() lagi!
+        Get.offAllNamed('/login');
+
+        // Munculkan snackbar setelah perintah pindah jalan
+        Get.snackbar(
+          "Sukses 🎉",
+          "Kata sandi berhasil diperbarui! Silakan masuk kembali.",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+      } else {
+        final data = jsonDecode(response.body);
+        // 🟢 AMAN: Tambahkan .toString() agar tidak memicu type mismatch
+        Get.snackbar(
+          "Gagal ❌",
+          data['detail']?.toString() ?? "Gagal memperbarui kata sandi.",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
     } catch (e) {
       isLoading.value = false;
-      Get.snackbar('Error', 'Gagal memperbarui kata sandi.', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        "Error ❌",
+        "Terjadi kesalahan sistem saat memperbarui sandi.",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
+  }
+
+  @override
+  void onClose() {
+    super.onClose();
   }
 }
