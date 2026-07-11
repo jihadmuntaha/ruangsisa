@@ -100,7 +100,7 @@ class ChatView extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Yuk, hubungi kontributor lewat menu\n"Ambil" atau "Barter" di Beranda, Beh!',
+                              'Yuk, hubungi kontributor lewat menu\n"Ambil" atau "Barter" di Beranda!',
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 13,
@@ -254,15 +254,6 @@ class ChatView extends StatelessWidget {
               },
             ),
           ),
-          floatingActionButton: FloatingActionButton(
-            backgroundColor: const Color(0xFF2D6A4F),
-            child: const Icon(Icons.chat_rounded, color: Colors.white),
-            onPressed: () {
-              controller.setChatPartner(2, 'Siti Taylor Tegal');
-              controller.chatRoomId.value = 0;
-              controller.initiateChatRoom();
-            },
-          ),
         );
       }
 
@@ -290,46 +281,48 @@ class ChatView extends StatelessWidget {
               },
             ),
             title: Obx(() {
-              final String partnerAvatar = controller.partnerAvatar.value;
+              final String partnerAvatar = controller.partnerAvatar.value.trim();
               final String currentPartnerName = controller.partnerName.value;
+
+              // 🟢 LOGIKA PERBAIKAN: Deteksi URL Supabase / HTTP secara akurat
+              final bool hasValidAvatar = partnerAvatar.isNotEmpty &&
+                  partnerAvatar != 'null' &&
+                  partnerAvatar != 'default' &&
+                  partnerAvatar != '';
+
+              final String displayName = currentPartnerName.isEmpty
+                  ? "Kontributor RuangSisa"
+                  : currentPartnerName;
 
               return Row(
                 children: [
                   CircleAvatar(
                     backgroundColor: const Color(0xFF2D6A4F),
                     radius: 18,
-                    child: partnerAvatar.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(18),
-                            child: Image.network(
-                              // 🟢 PERBAIKAN SAKTI 2: Gunakan ${AppConfig.baseUrl} murni agar tidak crash Uri
-                              partnerAvatar.startsWith('http')
-                                  ? partnerAvatar
-                                  : '${AppConfig.baseUrl}$partnerAvatar',
-                              fit: BoxFit.cover,
-                              width: 36,
-                              height: 36,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Icon(
-                                  Icons.person,
-                                  color: Colors.white,
-                                  size: 20,
-                                );
-                              },
-                            ),
+                    // 🟢 Jika URL diawali /static/ atau relatif, gabungkan dengan baseUrl. 
+                    // Jika berisi tautan penuh Supabase (http), langsung pakai NetworkImage.
+                    backgroundImage: hasValidAvatar
+                        ? NetworkImage(
+                            partnerAvatar.startsWith('http')
+                                ? partnerAvatar
+                                : '${AppConfig.baseUrl}$partnerAvatar',
                           )
-                        : const Icon(
-                            Icons.person,
-                            color: Colors.white,
-                            size: 20,
+                        : null,
+                    child: hasValidAvatar
+                        ? null
+                        : Text(
+                            displayName.isNotEmpty ? displayName[0].toUpperCase() : "R",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
                           ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      currentPartnerName.isEmpty
-                          ? "Kontributor RuangSisa"
-                          : currentPartnerName,
+                      displayName,
                       style: const TextStyle(
                         color: Colors.black,
                         fontSize: 16,
@@ -342,6 +335,7 @@ class ChatView extends StatelessWidget {
               );
             }),
           ),
+          // body: ... isi chat lu 
           body: Column(
             children: [
               Expanded(

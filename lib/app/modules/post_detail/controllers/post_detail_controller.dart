@@ -186,14 +186,14 @@ class PostDetailController extends GetxController {
     final String ownerName = currentPost['author']?['name'] ?? "Penjual Limbah";
 
     if (ownerId == 0) {
-      Get.snackbar("Info", "Data kontributor pemilik barang tidak valid, Beh!");
+      Get.snackbar("Info", "Data kontributor pemilik barang tidak valid!");
       return;
     }
 
     if (ownerId == currentUserId) {
       Get.snackbar(
         "Eits!",
-        "Ini barang lu sendiri, Beh! Gak bisa chat diri sendiri.",
+        "Ini barang lu sendiri! Gak bisa chat diri sendiri.",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.amber,
         colorText: Colors.black,

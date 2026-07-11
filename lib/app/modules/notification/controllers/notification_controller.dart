@@ -139,7 +139,7 @@ class NotificationController extends GetxController {
 
         Get.snackbar(
           notification.title ?? "📩 Pesan Baru",
-          notification.body ?? "Cek aplikasi RuangSisa sekarang, Beh!",
+          notification.body ?? "Cek aplikasi RuangSisa sekarang!",
           snackPosition: SnackPosition.TOP,
           backgroundColor: const Color(0xFF1B4332),
           colorText: Colors.white,

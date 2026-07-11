@@ -48,7 +48,7 @@ class FaceScanView extends GetView<FaceScanController> {
 
             const SizedBox(height: 16),
 
-            // 🍏 2. FIX TEXT UTAMA: Sekarang dinamis mengikuti pergerakan muka lu, Beh!
+            // 🍏 2. FIX TEXT UTAMA: Sekarang dinamis mengikuti pergerakan muka lu!
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Obx(
@@ -66,7 +66,7 @@ class FaceScanView extends GetView<FaceScanController> {
 
             const SizedBox(height: 8),
             Text(
-              "Pastikan pencahayaan cukup terang, Beh!",
+              "Pastikan pencahayaan cukup terang!",
               style: TextStyle(
                 color: Colors.white.withOpacity(0.6),
                 fontSize: 12,

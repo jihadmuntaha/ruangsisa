@@ -176,7 +176,7 @@ class ChatController extends GetxController {
         final errorData = jsonDecode(response.body);
         String errorMsg = errorData['detail'] ?? 'Gagal membuka kamar chat';
         Get.snackbar(
-          'Perhatian, Beh!',
+          'Perhatian!',
           errorMsg,
           snackPosition: SnackPosition.BOTTOM,
         );
@@ -264,6 +264,7 @@ class ChatController extends GetxController {
 
       if (response.statusCode == 200) {
         final List<dynamic> rooms = jsonDecode(response.body);
+
         // Cari room yang ID-nya cocok dengan chatRoomId kita sekarang
         final activeRoom = rooms.firstWhere(
           (r) => (r['id'] ?? 0) == chatRoomId.value,
@@ -274,10 +275,18 @@ class ChatController extends GetxController {
           final receiver = activeRoom['receiver'];
           partnerId.value = receiver['id'] ?? partnerId.value;
           partnerName.value = receiver['name']?.toString() ?? partnerName.value;
-          partnerAvatar.value = receiver['avatar']?.toString() ?? "";
-          partnerImage.value = receiver['avatar']?.toString() ?? "";
+
+          // 🟢 FIX MUTLAK: Antisipasi kalau backend mengirimkan key 'avatar' atau 'avatar_url'
+          String rawAvatar =
+              receiver['avatar']?.toString() ??
+              receiver['avatar_url']?.toString() ??
+              "";
+
+          partnerAvatar.value = rawAvatar;
+          partnerImage.value = rawAvatar;
+
           print(
-            "🎯 [PROFILE SYNC SUCCESS] Nama partner terupdate otomatis: ${partnerName.value}",
+            "🎯 [PROFILE SYNC SUCCESS] Avatar terupdate: ${partnerAvatar.value}",
           );
         }
       }

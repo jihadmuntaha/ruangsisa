@@ -25,7 +25,7 @@ class ForgotPasswordController extends GetxController {
     if (email.isEmpty || !GetUtils.isEmail(email)) {
       Get.snackbar(
         "Validasi Gagal ❌",
-        "Masukkan alamat email yang valid, Beh!",
+        "Masukkan alamat email yang valid!",
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

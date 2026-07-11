@@ -37,12 +37,12 @@ class AuthProvider extends GetConnect {
 
   Future<Response> registerUser(Map<String, dynamic> data) {
     print("📡 [REGISTER] Menembak ke jalur sah: $baseUrlAuth/auth/register");
-    return post('$baseUrlAuth/auth/register', data); // 🟢 Hapus /api, Beh!
+    return post('$baseUrlAuth/auth/register', data); // 🟢 Hapus /api!
   }
 
   Future<Response> loginUser(Map<String, dynamic> data) {
     print("📡 [LOGIN] Menembak ke jalur sah: $baseUrlAuth/auth/login");
-    return post('$baseUrlAuth/auth/login', data); // 🟢 Hapus /api, Beh!
+    return post('$baseUrlAuth/auth/login', data); // 🟢 Hapus /api!
   }
 
   Future<Response> loginWithGoogleProvider(Map<String, dynamic> data) async {

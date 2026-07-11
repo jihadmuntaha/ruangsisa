@@ -304,7 +304,7 @@ class AddPostView extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Mau Ditukar Dengan Apa, Beh? (Wishlist)',
+                          'Mau Ditukar Dengan Apa? (Wishlist)',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF002114),

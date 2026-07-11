@@ -87,6 +87,7 @@ class HomeView extends StatelessWidget {
       body: Column(
         children: [
           // Category Filters
+          // 🟢 Pindahkan Obx dari luar ListView ke dalam itemBuilder
           Container(
             height: 60,
             color: Colors.white,
@@ -96,43 +97,49 @@ class HomeView extends StatelessWidget {
               itemCount: categories.length,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemBuilder: (context, index) {
-                final isSelected =
-                    controller.selectedCategoryId.value ==
-                    categories[index]['id'];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ActionChip(
-                    avatar: Icon(
-                      categories[index]['icon'],
-                      size: 16,
-                      color: isSelected
-                          ? Colors.white
-                          : const Color(0xFF404943),
+                // 🟢 BUNGKUS OBX HANYA PADA WIDGET YANG NILAINYA BERUBAH SECARA REAKTIF
+                return Obx(() {
+                  final isSelected =
+                      controller.selectedCategoryId.value ==
+                      categories[index]['id'];
+
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ActionChip(
+                      avatar: Icon(
+                        categories[index]['icon'],
+                        size: 16,
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF404943),
+                      ),
+                      label: Text(categories[index]['name']),
+                      backgroundColor: isSelected
+                          ? const Color(0xFF2D6A4F) // Ijo tua pas aktif
+                          : const Color(
+                              0xFFC1ECD4,
+                            ).withOpacity(0.4), // Ijo muda transparan
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF404943),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      side: BorderSide.none,
+                      onPressed: () {
+                        controller.selectedCategoryId.value =
+                            categories[index]['id'];
+                        controller.fetchTimelinePosts(
+                          categoryId: categories[index]['id'],
+                        );
+                      },
                     ),
-                    label: Text(categories[index]['name']),
-                    backgroundColor: isSelected
-                        ? const Color(0xFF2D6A4F)
-                        : const Color(0xFFC1ECD4).withOpacity(0.4),
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? Colors.white
-                          : const Color(0xFF404943),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    side: BorderSide.none,
-                    onPressed: () {
-                      controller.selectedCategoryId.value =
-                          categories[index]['id'];
-                      controller.fetchTimelinePosts(
-                        categoryId: categories[index]['id'],
-                      );
-                    },
-                  ),
-                );
+                  );
+                });
               },
             ),
           ),
@@ -192,7 +199,7 @@ class HomeView extends StatelessWidget {
                       ownerName = post['user']['name'];
                     }
 
-                    // 🟢 2. DETEKSI AMAN 3 STATUS (Gak bakal disatukan atau tertukar lagi, Beh!)
+                    // 🟢 2. DETEKSI AMAN 3 STATUS (Gak bakal disatukan atau tertukar lagi!)
                     final String rawPrice = (post['price'] ?? '').toString();
                     final bool isBarterByWishlist =
                         post['barter_wishlist'] != null &&
@@ -272,30 +279,30 @@ class HomeView extends StatelessWidget {
                         postId: post['id'],
                         name: ownerName,
                         avatarUrl: finalAvatarUrl,
-                        type:
-                            tipeMurni, // 🟢 Menyuntikkan 'Donasi' / 'Dijual' / 'Barter'
+                        type: tipeMurni,
                         title: post['title'] ?? 'Tanpa Judul',
                         desc: post['description'] ?? '',
-                        price:
-                            infoKontribusi, // 🟢 Menyuntikkan nominal Rp / Teks Tukar Wishlist / Gratis
-                        btnLabel:
-                            labelTombol, // 🟢 Menyuntikkan teks tombol 'Ambil' / 'Beli' / 'Tawarkan'
+                        price: infoKontribusi,
+
+                        // 🟢 1. FIX WARNING: Gunakan kembali variabel labelTombol bawaan lu biar ga mubazir
+                        btnLabel: post['post_type'] == 'Dijual'
+                            ? 'Beli Material Sekarang'
+                            : post['post_type'] == 'Barter'
+                            ? 'Ajukan Penawaran Barter'
+                            : post['post_type'] == 'Donasi'
+                            ? 'Ambil Donasi Material'
+                            : labelTombol, // Menggunakan fallback ke labelTombol bawaan lu
+
                         imageUrl: finalImageUrl,
                         createdAt: post['created_at'] ?? '',
-                        onChatPressed: () {
-                          // 🟢 OTOMATIS: Meluncur membawa ID pemilik postingan asli secara aman jaya
-                          print(
-                            "💬 [CHAT] Membuka obrolan $tipeMurni dengan $ownerName (User ID: ${post['user_id']})",
-                          );
-                          Get.toNamed(
-                            '/chat',
-                            arguments: {
-                              'user_id': post['user_id'],
-                              'name': ownerName,
-                              'post_id': post['id'],
-                            },
-                          );
-                        },
+
+                        // 🟢 2. FIX EROR TYPE NULL: Jangan dioper 'null' mentah-mentah kalau parameternya mewajibkan VoidCallback.
+                        // Kita ganti pakai fungsi kosong '() {}' jika itu postingan milik sendiri.
+                        onChatPressed:
+                            post['user_id'].toString() ==
+                                controller.currentUserId.toString()
+                            ? () {} // Fungsi kosong agar tombol tidak crash tapi fungsi chat mati
+                            : () => controller.goToChatFromHome(post),
                       ),
                     );
                   },

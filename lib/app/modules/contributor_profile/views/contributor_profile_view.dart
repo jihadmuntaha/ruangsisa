@@ -124,7 +124,7 @@ class ContributorProfileView extends GetView<ContributorProfileController> {
                   child: Padding(
                     padding: const EdgeInsets.all(32.0),
                     child: Text(
-                      "Kontributor ini belum memposting material, Beh!",
+                      "Kontributor ini belum memposting material!",
                       style: TextStyle(color: Colors.grey[500]),
                     ),
                   ),

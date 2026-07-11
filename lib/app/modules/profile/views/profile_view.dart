@@ -27,217 +27,242 @@ class ProfileView extends StatelessWidget {
           const SizedBox(width: 8),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Kartu Identitas Akun
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                // 📸 1. FOTO PROFIL INTERAKTIF
-                GestureDetector(
-                  onTap: () => _showAvatarPickerSheet(context, controller),
-                  child: Stack(
-                    children: [
-                      Obx(() {
-                        String avatarPath = controller.avatarUrl.value;
-                        String? finalAvatarUrl;
+      body: RefreshIndicator(
+        color: const Color(0xFF2D6A4F),
+        onRefresh: () => controller
+            .refreshProfileData(), // Pemicu async refresh dari controller lu
+        child: ListView(
+          // 🟢 2. WAJIB TAMBAHKAN PHYSICS INI (Agar area kosong tetep sensitif pas ditarik ke bawah)
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Kartu Identitas Akun
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  // 📸 1. FOTO PROFIL INTERAKTIF
+                  GestureDetector(
+                    onTap: () => _showAvatarPickerSheet(context, controller),
+                    child: Stack(
+                      children: [
+                        Obx(() {
+                          String avatarPath = controller.avatarUrl.value;
+                          String? finalAvatarUrl;
 
-                        if (avatarPath.isNotEmpty) {
-                          if (avatarPath.startsWith('http')) {
-                            finalAvatarUrl = avatarPath;
-                          } else if (avatarPath.startsWith('/static/')) {
-                            finalAvatarUrl = "${controller.baseUrl}$avatarPath";
-                          } else {
-                            finalAvatarUrl =
-                                "${controller.baseUrl}/static/avatars/$avatarPath";
+                          if (avatarPath.isNotEmpty) {
+                            if (avatarPath.startsWith('http')) {
+                              finalAvatarUrl = avatarPath;
+                            } else if (avatarPath.startsWith('/static/')) {
+                              finalAvatarUrl =
+                                  "${controller.baseUrl}$avatarPath";
+                            } else {
+                              finalAvatarUrl =
+                                  "${controller.baseUrl}/static/avatars/$avatarPath";
+                            }
                           }
-                        }
 
-                        return CircleAvatar(
-                          radius: 40,
-                          backgroundColor: const Color(0xFF2D6A4F),
-                          backgroundImage: finalAvatarUrl != null
-                              ? NetworkImage(finalAvatarUrl)
-                              : null,
-                          child: finalAvatarUrl == null
-                              ? const Icon(
-                                  Icons.person,
-                                  size: 40,
-                                  color: Colors.white,
-                                )
-                              : null,
-                        );
-                      }),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF52B788),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            size: 14,
-                            color: Colors.white,
+                          return CircleAvatar(
+                            radius: 40,
+                            backgroundColor: const Color(0xFF2D6A4F),
+                            backgroundImage: finalAvatarUrl != null
+                                ? NetworkImage(finalAvatarUrl)
+                                : null,
+                            child: finalAvatarUrl == null
+                                ? const Icon(
+                                    Icons.person,
+                                    size: 40,
+                                    color: Colors.white,
+                                  )
+                                : null,
+                          );
+                        }),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF52B788),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 14,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                Obx(
-                  () => Text(
-                    controller.name.value,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      ],
                     ),
                   ),
-                ),
+                  const SizedBox(height: 12),
 
-                const SizedBox(height: 6),
-
-                Obx(
-                  () => Text(
-                    controller.bio.value,
-                    style: const TextStyle(
-                      color: Color(0xFF404943),
-                      fontSize: 13,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 40,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF2D6A4F)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    onPressed: () => Get.to(() => const EditProfileView()),
-                    child: const Text(
-                      'Edit Profil',
-                      style: TextStyle(
-                        color: Color(0xFF2D6A4F),
+                  Obx(
+                    () => Text(
+                      controller.name.value,
+                      style: const TextStyle(
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                ),
-                const Divider(height: 32),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Obx(
-                      () => _StatItem(
-                        num: '${controller.userContributions.length}',
-                        label: 'Postingan',
+                  const SizedBox(height: 6),
+
+                  Obx(
+                    () => Text(
+                      controller.bio.value,
+                      style: const TextStyle(
+                        color: Color(0xFF404943),
+                        fontSize: 13,
                       ),
-                    ),
-                    const _StatItem(num: '0', label: 'Pengikut'),
-                    const _StatItem(num: '0', label: 'Mengikuti'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Tab Grid Konten Saya
-          const Text(
-            'Kontribusi Active',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-
-          Obx(() {
-            if (controller.userContributions.isEmpty) {
-              return Container(
-                height: 150,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.image_not_supported_outlined,
-                      color: Colors.grey,
-                      size: 36,
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Belum ada kontribusi waste material.\nYuk mulai upload sisa tekstilmu!',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
-                  ],
-                ),
-              );
-            }
+                  ),
 
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: controller.userContributions.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 1.0,
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 40,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFF2D6A4F)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      onPressed: () => Get.to(() => const EditProfileView()),
+                      child: const Text(
+                        'Edit Profil',
+                        style: TextStyle(
+                          color: Color(0xFF2D6A4F),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 32),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Obx(
+                        () => _StatItem(
+                          num: '${controller.userContributions.length}',
+                          label: 'Postingan',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              itemBuilder: (context, index) {
-                final item = controller.userContributions[index];
+            ),
+            const SizedBox(height: 16),
 
-                // 🟢 FIX PINTAR 1: Supaya list barang milik user otomatis deteksi link online Picsum
-                String? finalImageUrl;
-                if (item['images'] != null &&
-                    item['images'].toString().isNotEmpty) {
-                  String imagePath = item['images'].toString();
-                  if (imagePath.startsWith('http')) {
-                    finalImageUrl = imagePath;
-                  } else {
-                    String cleanFileName = imagePath.split('/').last;
-                    finalImageUrl =
-                        "${controller.baseUrl}/static/uploads/$cleanFileName";
-                  }
-                }
+            // Tab Grid Konten Saya
+            const Text(
+              'Kontribusi Active',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
 
-                return GestureDetector(
-                  onTap: () {
-                    Get.toNamed(
-                      '/post-detail',
-                      arguments: {'post_id': item['id']},
-                    );
-                  },
-                  child: _buildMiniGrid(
-                    item['title'] ?? '',
-                    item['post_type'] ?? '',
-                    finalImageUrl,
+            Obx(() {
+              if (controller.userContributions.isEmpty) {
+                return Container(
+                  height: 150,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.grey,
+                        size: 36,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Belum ada kontribusi waste material.\nYuk mulai upload sisa tekstilmu!',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 );
-              },
-            );
-          }),
-        ],
+              }
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: controller.userContributions.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 1.0,
+                ),
+                itemBuilder: (context, index) {
+                  final item = controller.userContributions[index];
+
+                  // 🟢 FIX PINTAR 1: Supaya list barang milik user otomatis deteksi link online Picsum
+                  String? finalImageUrl;
+                  if (item['images'] != null &&
+                      item['images'].toString().isNotEmpty) {
+                    String imagePath = item['images'].toString();
+                    if (imagePath.startsWith('http')) {
+                      finalImageUrl = imagePath;
+                    } else {
+                      String cleanFileName = imagePath.split('/').last;
+                      finalImageUrl =
+                          "${controller.baseUrl}/static/uploads/$cleanFileName";
+                    }
+                  }
+
+                  return GestureDetector(
+                    onTap: () {
+                      // 🟢 Ambil ID dengan fallback taktis ke nama field alternatif yang umum di database
+                      final actualPostId =
+                          item['id'] ??
+                          item['post_id'] ??
+                          item['id_post'] ??
+                          item['ID'];
+
+                      if (actualPostId != null) {
+                        Get.toNamed(
+                          '/post-detail',
+                          arguments: {'post_id': actualPostId},
+                        );
+                      } else {
+                        // Menampilkan log di konsol VS Code untuk mempermudah audit isi map JSON asli
+                        debugPrint(
+                          "🚨 [DEBUG RUANGSISA] Key ID tidak ditemukan. Isi data item: $item",
+                        );
+                        Get.snackbar(
+                          "Gagal Membuka",
+                          "ID Postingan tidak terdeteksi sistem.",
+                          snackPosition: SnackPosition.BOTTOM,
+                        );
+                      }
+                    },
+                    child: _buildMiniGrid(
+                      item['title'] ?? '',
+                      item['post_type'] ?? '',
+                      finalImageUrl,
+                    ),
+                  );
+                },
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
@@ -254,7 +279,7 @@ class ProfileView extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.camera_alt, color: Color(0xFF2D6A4F)),
-              title: const Text('Ambil via Kamera HP, Beh!'),
+              title: const Text('Ambil via Kamera HP!'),
               onTap: () {
                 Get.back();
                 controller.pickAndUploadAvatar(ImageSource.camera);
@@ -503,7 +528,7 @@ class SettingsView extends GetView<ProfileController> {
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             subtitle: const Text(
-              'Daftarkan wajah lu untuk login instan biometrik, Beh!',
+              'Daftarkan wajah lu untuk login instan biometrik!',
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
@@ -540,7 +565,7 @@ class SettingsView extends GetView<ProfileController> {
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             subtitle: const Text(
-              'Audit trail: Riwayat login, perubahan data tekstil, & aksi lu, Beh!',
+              'Audit trail: Riwayat login, perubahan data tekstil, & aksi lu!',
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
@@ -548,20 +573,7 @@ class SettingsView extends GetView<ProfileController> {
             },
           ),
           const SizedBox(height: 16),
-          _buildSectionTitle('Aplikasi & Notifikasi'),
-          ListTile(
-            leading: const Icon(
-              Icons.notifications_outlined,
-              color: Colors.orange,
-            ),
-            title: const Text('Notifikasi'),
-            subtitle: const Text(
-              'Atur pesan masuk, pengingat OTP, & info donasi',
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-          const Divider(height: 1),
+          _buildSectionTitle('Aplikasi & Dukungan'),
           ListTile(
             leading: const Icon(Icons.help_outline_rounded, color: Colors.blue),
             title: const Text('Bantuan & Hubungi Kami'),
@@ -569,7 +581,120 @@ class SettingsView extends GetView<ProfileController> {
               'Pusat edukasi sirkular ekonomi & CS RuangSisa',
             ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
+            onTap: () {
+              // 🟢 FUNGSI ABOUT, DEVELOPER, & COPYRIGHT
+              Get.defaultDialog(
+                title: "Tentang RuangSisa",
+                titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+                content: Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    // Logo kecil aplikasi atau ikon bunder
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2D6A4F).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.eco_rounded,
+                        color: Color(0xFF2D6A4F),
+                        size: 40,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "RuangSisa App",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const Text(
+                      "Versi 1.0.0 (Production Ready)",
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                    const Divider(height: 24),
+                    const Text(
+                      "Developers:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Developer 1
+                        const Expanded(
+                          child: Column(
+                            children: [
+                              Text(
+                                "Jihad Muntaha A.",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                "Informatics Engineering",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Garis Pembatas Vertikal Tengah
+                        Container(
+                          height: 30,
+                          width: 1,
+                          color: Colors.grey.withOpacity(0.3),
+                        ),
+                        // Developer 2
+                        const Expanded(
+                          child: Column(
+                            children: [
+                              Text(
+                                "Bayu Rahmat N.",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                "Informatics Engineering",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "© 2026 RuangSisa Marketplace.\nAll Rights Reserved.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
+                  ],
+                ),
+                textConfirm: "Tutup",
+                confirmTextColor: Colors.white,
+                buttonColor: const Color(0xFF2D6A4F),
+                onConfirm: () => Get.back(),
+              );
+            },
           ),
           const SizedBox(height: 32),
           Padding(

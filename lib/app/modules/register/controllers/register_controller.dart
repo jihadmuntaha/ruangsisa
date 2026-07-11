@@ -10,7 +10,7 @@ class RegisterController extends GetxController {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  // ... sisa kode ke bawah tetap sama utuh bawaan lu, jangan diubah karena udah mumpuni ...
+  // ... sisa kode ke bawah tetap sama utuh bawaan, jangan diubah karena udah mumpuni ...
   var isLoading = false.obs;
   var ispasswordHidden = true.obs;
   var _isProcessing = false;
@@ -90,7 +90,7 @@ class RegisterController extends GetxController {
         );
 
         Get.snackbar(
-          "Langkah Kedua, Beh! 📨",
+          "Langkah Kedua! 📨",
           "Akun sukses dibuat! Silakan cek email lu buat ambil kode OTP rahasia.",
           backgroundColor: Colors.green,
           colorText: Colors.white,
@@ -108,7 +108,7 @@ class RegisterController extends GetxController {
                 "Email sudah terdaftar",
               ))) {
         print(
-          "💡 [LOGIC BYPASS] Akun lu sebenarnya sudah masuk Supabase, Beh! Langsung oper ke OTP!",
+          "💡 [LOGIC BYPASS] Akun lu sebenarnya sudah masuk Supabase! Langsung oper ke OTP!",
         );
         tempEmail.value = email;
 
@@ -120,7 +120,7 @@ class RegisterController extends GetxController {
         );
 
         Get.snackbar(
-          "Akun Sudah Siap, Beh! 📨",
+          "Akun Sudah Siap! 📨",
           "Email lu sudah terdaftar sebelumnya. Silakan masukkan kode OTP yang ada di Gmail lu.",
           backgroundColor: Colors.blue,
           colorText: Colors.white,

@@ -22,7 +22,7 @@ class MyPostsTabView extends StatelessWidget {
         if (controller.myPosts.isEmpty) {
           return const Center(
             child: Text(
-              "Lu belum pernah buat postingan, Beh!",
+              "Lu belum pernah buat postingan!",
               style: TextStyle(color: Colors.white70),
             ),
           );
@@ -89,7 +89,7 @@ class MyPostsTabView extends StatelessWidget {
                       onPressed: () {
                         Get.defaultDialog(
                           title: "Hapus Postingan",
-                          middleText: "Yakin mau hapus '${post.title}', Beh?",
+                          middleText: "Yakin mau hapus '${post.title}'?",
                           textConfirm: "Ya, Hapus",
                           textCancel: "Batal",
                           confirmTextColor: Colors.white,

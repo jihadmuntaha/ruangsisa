@@ -47,7 +47,7 @@ class FaceScanController extends GetxController {
           await availableCameras();
 
       if (availableDevCameras.isEmpty) {
-        Get.snackbar("Eror", "Kamera perangkat tidak terdeteksi, Beh!");
+        Get.snackbar("Eror", "Kamera perangkat tidak terdeteksi!");
         return;
       }
 
@@ -90,7 +90,7 @@ class FaceScanController extends GetxController {
 
         if (currentStep.value == 1) {
           currentStep.value = 2;
-          stepInstruction.value = "Sekarang Menoleh Sedikit ke KIRI, Beh!";
+          stepInstruction.value = "Sekarang Menoleh Sedikit ke KIRI!";
           isLoading.value =
               false; // Matikan loading sementara untuk step berikutnya
           Get.snackbar(
@@ -102,7 +102,7 @@ class FaceScanController extends GetxController {
           return;
         } else if (currentStep.value == 2) {
           currentStep.value = 3;
-          stepInstruction.value = "Terakhir, Menoleh Sedikit ke KANAN, Beh!";
+          stepInstruction.value = "Terakhir, Menoleh Sedikit ke KANAN!";
           isLoading.value =
               false; // Matikan loading sementara untuk step terakhir
           Get.snackbar(
@@ -174,7 +174,7 @@ class FaceScanController extends GetxController {
         _resetRegisterFlow();
         Get.snackbar(
           "Gagal ❌",
-          "OpenCV gagal membaca pola wajah lu. Ulangi dari posisi depan, Beh!",
+          "OpenCV gagal membaca pola wajah lu. Ulangi dari posisi depan!",
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );

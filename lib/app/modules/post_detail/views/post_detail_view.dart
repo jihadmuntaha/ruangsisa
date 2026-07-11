@@ -41,7 +41,7 @@ class PostDetailView extends StatelessWidget {
                     Get.defaultDialog(
                       title: "Hapus Postingan",
                       middleText:
-                          "Yakin mau menghapus '${post['title']}' dari RuangSisa, Beh?",
+                          "Yakin mau menghapus '${post['title']}' dari RuangSisa?",
                       textConfirm: "Ya, Hapus",
                       textCancel: "Batal",
                       confirmTextColor: Colors.white,
@@ -229,7 +229,7 @@ class PostDetailView extends StatelessWidget {
                                 color: Colors.blueGrey,
                               ),
                             ),
-                          ),
+                          ), 
                         ] else ...[
                           const Text(
                             'Gratis / Donasi 🎁',
@@ -279,13 +279,31 @@ class PostDetailView extends StatelessWidget {
                           CircleAvatar(
                             radius: 22,
                             backgroundColor: const Color(0xFFD4EDDA),
-                            child: Text(
-                              (post['author']?['name'] ?? 'U')[0].toUpperCase(),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF155724),
-                              ),
-                            ),
+                            // 🟢 Tampilkan foto dari internet jika data avatar tidak kosong
+                            backgroundImage:
+                                post['author']?['avatar'] != null &&
+                                    post['author']!['avatar']
+                                        .toString()
+                                        .isNotEmpty
+                                ? NetworkImage(
+                                    post['author']!['avatar'].toString(),
+                                  )
+                                : null,
+                            // 🟢 Jika backgroundImage bernilai null, child (inisial huruf) otomatis akan muncul
+                            child:
+                                post['author']?['avatar'] != null &&
+                                    post['author']!['avatar']
+                                        .toString()
+                                        .isNotEmpty
+                                ? null
+                                : Text(
+                                    (post['author']?['name'] ?? 'U')[0]
+                                        .toUpperCase(),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF155724),
+                                    ),
+                                  ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -531,11 +549,13 @@ class PostDetailView extends StatelessWidget {
                 size: 18,
               ),
               label: Text(
-                post['type'] == 'Dijual'
+                post['post_type'] == 'Dijual'
                     ? 'Beli Material Sekarang'
-                    : post['type'] == 'Barter'
+                    : post['post_type'] == 'Barter'
                     ? 'Ajukan Penawaran Barter'
-                    : 'Ambil Donasi Material',
+                    : post['post_type'] == 'Donasi'
+                    ? 'Ambil Donasi Material'
+                    : 'Ambil Material',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 15,

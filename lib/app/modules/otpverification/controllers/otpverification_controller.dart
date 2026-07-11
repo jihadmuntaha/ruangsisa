@@ -60,7 +60,7 @@ class OtpVerificationController extends GetxController {
 
       print("📡 [OTP] Menembak kode verifikasi ke backend laptop lu: $payload");
 
-      // 🚀 HIT KE BACKEND LAPTOP LU, BEH!
+      // 🚀 HIT KE BACKEND LAPTOP LU!
       Response response = await _authProvider.verifyOtpProvider(payload);
 
       print("📡 [OTP] Response Status Backend: ${response.statusCode}");
@@ -70,8 +70,8 @@ class OtpVerificationController extends GetxController {
         Get.snackbar(
           "Verifikasi Sukses 🎉",
           purpose.value == 'register'
-              ? "Akun lu sudah aktif! Langkah terakhir, mari amankan biometrik lu, Beh."
-              : "Verifikasi berhasil! Silakan ubah password lu.",
+              ? "Akun lu sudah aktif! Langkah terakhir, mari amankan biometrik anda."
+              : "Verifikasi berhasil! Silakan ubah password anda.",
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
@@ -111,7 +111,7 @@ class OtpVerificationController extends GetxController {
       print("🚨 [OTP] Terjadi Exception Critical: $e");
       Get.snackbar(
         "Error",
-        "Gagal terhubung ke laptop backend lu, Beh!",
+        "Gagal terhubung ke laptop backend lu!",
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -144,7 +144,7 @@ class OtpVerificationController extends GetxController {
 
         Get.snackbar(
           "OTP Dikirim Ulang",
-          "Kode baru berhasil diledakkan ke email lu, coba cek berkala!",
+          "Kode baru berhasil diledakkan ke email anda , coba cek berkala!",
           backgroundColor: Colors.blueAccent,
           colorText: Colors.white,
         );

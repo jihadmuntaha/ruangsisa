@@ -37,6 +37,16 @@ class ProfileController extends GetxController {
   }
 
   // ===================================================================
+  // 🔄 PEMICU REFRESH INDICATOR (DITARIK KE BAWAH)
+  // ===================================================================
+  Future<void> refreshProfileData() async {
+    // Memanggil fungsi load data yang sudah ada secara asynchronous
+    fetchUserProfileFromDatabase();
+    // Beri delay tipis agar animasi RefreshIndicator di UI terasa mulus
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  // ===================================================================
   // 1. MEMUAT PROFIL & FILTER POSTINGAN (Logika Asli Lu yang Sudah Diperkuat)
   // ===================================================================
   void fetchUserProfileFromDatabase() async {
@@ -230,7 +240,7 @@ class ProfileController extends GetxController {
       if (token == null || token.isEmpty) {
         Get.snackbar(
           "Akses Ditolak ❌",
-          "Token otentikasi tidak ditemukan di HP lu, Beh. Silakan logout lalu login ulang!",
+          "Token otentikasi tidak ditemukan di HP lu. Silakan logout lalu login ulang!",
           backgroundColor: Colors.red[800],
           colorText: Colors.white,
         );
@@ -276,7 +286,7 @@ class ProfileController extends GetxController {
           content: Column(
             children: [
               const Text(
-                "Sebelum password diganti, masukkan 4 digit kode OTP yang tercetak di terminal uvicorn laptop lu, Beh!",
+                "Sebelum password diganti, masukkan 4 digit kode OTP yang tercetak di terminal uvicorn laptop lu!",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: Colors.black),
               ),
@@ -310,10 +320,7 @@ class ProfileController extends GetxController {
           onConfirm: () async {
             String codeOtp = otpInputCtrl.text.trim();
             if (codeOtp.length < 4) {
-              Get.snackbar(
-                "Eror ❌",
-                "Kode OTP harus berukuran 4 digit penuh, Beh!",
-              );
+              Get.snackbar("Eror ❌", "Kode OTP harus berukuran 4 digit penuh!");
               return;
             }
 
@@ -342,7 +349,7 @@ class ProfileController extends GetxController {
                   verifyResponse.body != null &&
                       verifyResponse.body['detail'] != null
                   ? verifyResponse.body['detail']
-                  : "Kode OTP salah atau kedaluwarsa, Beh.";
+                  : "Kode OTP salah atau kedaluwarsa.";
               Get.snackbar(
                 "Gagal ❌",
                 msg,
@@ -355,7 +362,7 @@ class ProfileController extends GetxController {
       } else if (requestResponse.statusCode == 401) {
         Get.snackbar(
           "Sesi Tidak Sah 🔐",
-          "Backend menolak token lu, Beh. Coba lakukan logout murni lalu login kembali agar session ter-refresh!",
+          "Backend menolak token lu. Coba lakukan logout murni lalu login kembali agar session ter-refresh!",
           backgroundColor: Colors.red[800],
           colorText: Colors.white,
         );
@@ -381,7 +388,6 @@ class ProfileController extends GetxController {
 
   // ===================================================================
   // 5. DAFTAR / LOGIN INSTAN BIOMETRIK WAJAH (FACE ID)
-  
 
   // ===================================================================
   // 🚪 Aksi Keluar Akun (Clear Session)
@@ -390,7 +396,7 @@ class ProfileController extends GetxController {
     await box.erase();
     Get.snackbar(
       "Logout Berhasil",
-      "Sesi aman ditutup, sampai jumpa kembali, Beh!",
+      "Sesi aman ditutup, sampai jumpa kembali!",
       backgroundColor: const Color(0xFF2D6A4F),
       colorText: const Color.fromARGB(255, 237, 246, 239),
     );

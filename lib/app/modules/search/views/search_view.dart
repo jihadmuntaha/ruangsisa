@@ -437,7 +437,7 @@ class SearchView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              "Data tidak ditemukan, Beh!",
+              "Data tidak ditemukan!",
               style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
             ),
           ],

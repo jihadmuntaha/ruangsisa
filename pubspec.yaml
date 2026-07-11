@@ -51,6 +51,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: "^0.13.1"
+  flutter_native_splash: "^2.4.0"
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -61,7 +63,19 @@ dev_dependencies:
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/Icon_Ruangsisa.png" # Path ke logo RuangSisa lu
+  min_sdk_android: 21
 
+flutter_native_splash:
+  color: "#F8F9FA" # Warna latar belakang splash screen (samakan dengan bg aplikasi lu)
+  image: "assets/images/Logo_Ruangsisa.png" # Logo RuangSisa di tengah layar
+
+  android_12:
+    image: "assets/images/Logo_Ruangsisa.png"
+    color: "#F8F9FA"
 # The following section is specific to Flutter packages.
 flutter:
 

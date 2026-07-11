@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:ruang_sisa/app_config.dart';
-import '../../../data/models/activity_log_model.dart'; // ◄ Sudah pas mengarah ke folder baru, Beh!
+import '../../../data/models/activity_log_model.dart'; // ◄ Sudah pas mengarah ke folder baru!
 
 class ActivityLogController extends GetxController {
   var isLoading = true.obs;
@@ -75,7 +75,7 @@ class ActivityLogController extends GetxController {
       print("🚨 [LOG EXCEPTION CRASH]: Terjadi eror saat eksekusi: $e");
       Get.snackbar(
         "Server Berpikir",
-        "Vercel sedang bersiap, coba ketuk ikon refresh di pojok kanan atas dalam 3 detik, Beh! 🔄",
+        "Vercel sedang bersiap, coba ketuk ikon refresh di pojok kanan atas dalam 3 detik! 🔄",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Color(0xFF3A301C),
         colorText: Color.fromARGB(255, 255, 255, 255),

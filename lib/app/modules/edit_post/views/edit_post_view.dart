@@ -43,7 +43,7 @@ class EditPostView extends GetView<EditPostController> {
                   ),
                 ),
                 validator: (value) =>
-                    value!.isEmpty ? 'Judul harus diisi, Beh' : null,
+                    value!.isEmpty ? 'Judul harus diisi' : null,
               ),
               const SizedBox(height: 16),
 
@@ -57,7 +57,7 @@ class EditPostView extends GetView<EditPostController> {
                   ),
                 ),
                 validator: (value) =>
-                    value!.isEmpty ? 'Deskripsi isi dulu, Beh' : null,
+                    value!.isEmpty ? 'Deskripsi isi dulu' : null,
               ),
               const SizedBox(height: 16),
 
@@ -71,8 +71,7 @@ class EditPostView extends GetView<EditPostController> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  validator: (value) =>
-                      value!.isEmpty ? 'Harga berapa, Beh?' : null,
+                  validator: (value) => value!.isEmpty ? 'Harga berapa?' : null,
                 ),
               ] else if (controller.postType == 'Barter') ...[
                 TextFormField(
@@ -84,7 +83,7 @@ class EditPostView extends GetView<EditPostController> {
                     ),
                   ),
                   validator: (value) =>
-                      value!.isEmpty ? 'Isi target barternya, Beh' : null,
+                      value!.isEmpty ? 'Isi target barternya!' : null,
                 ),
               ],
 

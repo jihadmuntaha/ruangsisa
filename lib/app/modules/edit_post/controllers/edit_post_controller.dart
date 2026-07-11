@@ -58,12 +58,16 @@ class EditPostController extends GetxController {
       Map<String, dynamic> bodyData = {
         'title': titleController.text,
         'description': descController.text,
+        'post_type':
+            postType, // 🟢 TAMBAHKAN INI (Misal: 'Dijual', 'Barter', atau 'Donasi')
         'price': postType == 'Dijual'
             ? int.tryParse(priceController.text) ?? 0
             : null,
         'barter_wishlist': postType == 'Barter'
             ? wishlistController.text
             : null,
+        'image_url':
+            null, // 🟢 TAMBAHKAN INI (Isi dengan URL foto jika ada fitur ganti gambar, atau set null)
       };
 
       final response = await http

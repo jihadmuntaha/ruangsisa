@@ -57,7 +57,7 @@ class OtpVerificationView extends StatelessWidget {
               ),
               const SizedBox(height: 40),
 
-              // 🟢 6 KOTAK INPUT OTP HORIZONTAL (SUDAH DISESUAIKAN, BEH!)
+              // 🟢 6 KOTAK INPUT OTP HORIZONTAL (SUDAH DISESUAIKAN!)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(6, (index) {

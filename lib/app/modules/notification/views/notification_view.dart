@@ -44,7 +44,7 @@ class NotificationView extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  "Belum ada notifikasi baru, Beh!",
+                  "Belum ada notifikasi baru!",
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey[600],

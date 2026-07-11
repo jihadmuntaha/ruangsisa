@@ -94,7 +94,7 @@ class ActivityLogView extends GetView<ActivityLogController> {
         if (controller.logList.isEmpty) {
           return const Center(
             child: Text(
-              "Belum ada riwayat aktivitas tercatat, Beh!",
+              "Belum ada riwayat aktivitas tercatat!",
               style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
           );

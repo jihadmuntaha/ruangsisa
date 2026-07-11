@@ -284,7 +284,7 @@ class LoginView extends GetView<LoginController> {
                                       content: Column(
                                         children: [
                                           const Text(
-                                            "Masukkan email akun RuangSisa Anda untuk mulai memindai wajah, Beh!",
+                                            "Masukkan email akun RuangSisa Anda untuk mulai memindai wajah!",
                                             textAlign: TextAlign.center,
                                             style: TextStyle(
                                               fontSize: 13,

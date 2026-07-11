@@ -148,7 +148,7 @@ class AddPostController extends GetxController {
     }
 
     if (selectedType.value == 'sale' && priceController.text.isEmpty) {
-      Get.snackbar("Error", "Harga tidak boleh kosong untuk opsi Dijual, Beh!");
+      Get.snackbar("Error", "Harga tidak boleh kosong untuk opsi Dijual!");
       return;
     }
     if (selectedType.value == 'barter' && wishlistController.text.isEmpty) {
@@ -187,15 +187,19 @@ class AddPostController extends GetxController {
       // 🟢 2. STRATEGI TITIP DATA AMAN JAYA (Gak bakalan bikin API Vercel lu Eror 422/500):
       // Kita kembalikan kiblat post_type sistem database backend lu murni ke 'Donasi' atau 'Dijual'.
       // Biar 'Barter' diidentifikasi secara pintar di HomeView via 'barter_wishlist'!
+      // 🟢 FIX 1: Deteksi ketiga tipe secara presisi (Donasi, Barter, Dijual)
       String postTypeValue = selectedType.value == 'donation'
           ? 'Donasi'
+          : selectedType.value == 'barter'
+          ? 'Barter'
           : 'Dijual';
 
       Map<String, String> fields = {
         'title': titleController.text,
         'description': descController.text,
         'user_id': userId.toString(),
-        'post_type': postTypeValue,
+        'post_type':
+            postTypeValue, // ◄ Sekarang nilai 'Barter' bakal lolos ke sini!
         'category_id': selectedCategoryId.value.toString(),
         'image_url': publicImageUrl,
       };
@@ -209,8 +213,7 @@ class AddPostController extends GetxController {
       if (selectedType.value == 'barter') {
         fields['price'] = "0";
         if (wishlistController.text.isNotEmpty) {
-          fields['barter_wishlist'] = wishlistController
-              .text; // ◄ Kunci Utama biar di DB gak masuk NULL!
+          fields['barter_wishlist'] = wishlistController.text;
         }
       }
 
@@ -222,10 +225,7 @@ class AddPostController extends GetxController {
       if (response.statusCode == 200 || response.statusCode == 201) {
         _clearForm();
         Get.back(result: true);
-        Get.snackbar(
-          "Sukses 🎉",
-          "Postingan kain perca mumpuni berhasil mengudara!",
-        );
+        Get.snackbar("Sukses 🎉", "Postingan barang anda berhasil mengudara!");
       } else {
         String errorMsg =
             response.body?['detail'] ?? "Gagal menambahkan postingan";
@@ -257,6 +257,10 @@ class AddPostController extends GetxController {
       priceController.clear();
     }
     if (type != 'barter') {
+      wishlistController.clear();
+    }
+    if (type == 'sale') {
+      // 🟢 FIX 2: Ubah 'dijual' menjadi 'sale' agar sesuai dengan state UI lu
       wishlistController.clear();
     }
   }

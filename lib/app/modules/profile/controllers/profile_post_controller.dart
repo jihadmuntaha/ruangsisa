@@ -31,7 +31,7 @@ class ProfilePostController extends GetxController {
       if (activeToken.isEmpty) {
         Get.snackbar(
           "Akses Ditolak",
-          "Token login lu gak ketemu atau udah expired, Beh! 🔑❌",
+          "Token login lu gak ketemu atau udah expired! 🔑❌",
         );
         return;
       }
@@ -54,7 +54,7 @@ class ProfilePostController extends GetxController {
         print("Gagal fetchMyPosts, Status Code: ${response.statusCode}");
       }
     } catch (e) {
-      Get.snackbar("Eror", "Gagal mengambil postingan lu, Beh: $e");
+      Get.snackbar("Eror", "Gagal mengambil postingan: $e");
     } finally {
       isLoading.value = false;
     }
@@ -73,7 +73,7 @@ class ProfilePostController extends GetxController {
       if (activeToken.isEmpty) {
         Get.snackbar(
           "Akses Ditolak",
-          "Token login lu gak ketemu atau udah expired, Beh! 🔑❌",
+          "Token login lu gak ketemu atau udah expired! 🔑❌",
         );
         return false;
       }
